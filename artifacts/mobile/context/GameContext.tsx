@@ -213,7 +213,7 @@ function reducer(
       const sinceLastPrestige =
         state.lifetimePoints - state.lastPrestigeLifetimePoints;
       if (sinceLastPrestige < 1_000_000) return { state, leveledUp: false };
-      const rawEarned = calcPrestigePoints(sinceLastPrestige);
+      const rawEarned = calcPrestigePoints(state.lifetimePoints);
       const ppGainMult =
         Math.pow(2, state.prestigeUpgrades.morePP.buys) *
         (state.rebirthPerks.bonusMult ? 2 : 1);
