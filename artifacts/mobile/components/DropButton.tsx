@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useRef } from "react";
+import React, { useCallback } from "react";
 import {
   Platform,
   StyleSheet,
@@ -44,10 +44,7 @@ function FloatingText({
     translateY.value = withTiming(-70, { duration: 900, easing: Easing.out(Easing.quad) });
     opacity.value = withSequence(
       withTiming(1, { duration: 200 }),
-      withTiming(0, { duration: 700 }, (done) => {
-        if (done) {
-        }
-      })
+      withTiming(0, { duration: 700 })
     );
     const timer = setTimeout(onDone, 950);
     return () => clearTimeout(timer);
@@ -71,7 +68,6 @@ export default function DropButton({ onDrop, dropAmount }: DropButtonProps) {
   const scale = useSharedValue(1);
   const glow = useSharedValue(0.4);
   const [particles, setParticles] = React.useState<FloatParticle[]>([]);
-  const dropCountRef = useRef(0);
 
   const handlePress = useCallback(() => {
     onDrop();

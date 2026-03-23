@@ -27,7 +27,6 @@ export interface GameState {
   points: number;
   runPoints: number;
   lifetimePoints: number;
-  lastPrestigeLifetimePoints: number;
   totalDrops: number;
   xp: number;
   level: number;
@@ -117,7 +116,6 @@ const initialState: GameState = {
   points: 0,
   runPoints: 0,
   lifetimePoints: 0,
-  lastPrestigeLifetimePoints: 0,
   totalDrops: 0,
   xp: 0,
   level: 1,
@@ -210,9 +208,7 @@ function reducer(
     }
 
     case "PRESTIGE": {
-      const sinceLastPrestige =
-        state.lifetimePoints - state.lastPrestigeLifetimePoints;
-      if (sinceLastPrestige < 1_000_000) return { state, leveledUp: false };
+      if (state.lifetimePoints < 1_000_000) return { state, leveledUp: false };
       const rawEarned = calcPrestigePoints(state.lifetimePoints);
       const ppGainMult =
         Math.pow(2, state.prestigeUpgrades.morePP.buys) *
@@ -227,7 +223,6 @@ function reducer(
           xp: 0,
           level: 1,
           prestigePoints: state.prestigePoints + bonusPP,
-          lastPrestigeLifetimePoints: state.lifetimePoints,
           dropUpgrades: { ...initialDropUpgrades },
         },
         leveledUp: false,
@@ -242,21 +237,15 @@ function reducer(
         return { state, leveledUp: false };
 
       const newRebirthCount = state.rebirthCount + 1;
-
-      const autoBuyUpgrades =
-        state.rebirthPerks.autoBuyUpgrades || which === 1;
+      const autoBuyUpgrades = state.rebirthPerks.autoBuyUpgrades || which === 1;
       const bonusMult = state.rebirthPerks.bonusMult || which === 2;
 
       return {
         state: {
           ...initialState,
           lifetimePoints: state.lifetimePoints,
-          lastPrestigeLifetimePoints: state.lifetimePoints,
           rebirthCount: newRebirthCount,
-          rebirthPerks: {
-            autoBuyUpgrades,
-            bonusMult,
-          },
+          rebirthPerks: { autoBuyUpgrades, bonusMult },
         },
         leveledUp: false,
       };
@@ -269,7 +258,6 @@ function reducer(
           ...action.state,
           lifetimePoints: action.state.lifetimePoints ?? action.state.runPoints ?? 0,
           runPoints: action.state.runPoints ?? 0,
-          lastPrestigeLifetimePoints: action.state.lastPrestigeLifetimePoints ?? 0,
         },
         leveledUp: false,
       };
@@ -303,7 +291,6 @@ interface GameContextValue {
   canRebirth2: boolean;
   showUpgrades: boolean;
   leveledUp: boolean;
-  prestigeDelta: number;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -399,8 +386,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const dropTimerMs = useMemo(() => getDropTimerMs(state), [state]);
   const xpRequired = useMemo(() => xpForLevel(state.level), [state.level]);
   const xpProgress = state.xp / xpRequired;
-  const prestigeDelta = state.lifetimePoints - state.lastPrestigeLifetimePoints;
-  const canPrestige = prestigeDelta >= 1_000_000;
+  const canPrestige = state.lifetimePoints >= 1_000_000;
   const canRebirth1 = state.runPoints >= 1e75;
   const canRebirth2 = state.runPoints >= 1e100 && state.rebirthCount >= 1;
   const showUpgrades = state.totalDrops >= 10;
@@ -423,7 +409,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth2,
       showUpgrades,
       leveledUp: combined.leveledUp,
-      prestigeDelta,
     }),
     [
       state,
@@ -442,7 +427,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth2,
       showUpgrades,
       combined.leveledUp,
-      prestigeDelta,
     ]
   );
 
