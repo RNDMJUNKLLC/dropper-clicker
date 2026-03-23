@@ -7,6 +7,9 @@ const PRESTIGE_GOLD = "#FFD700";
 const PRESTIGE_ORANGE = "#FF8C00";
 const REBIRTH_PURPLE = "#A855F7";
 const REBIRTH_PINK = "#EC4899";
+const REBIRTH_BLUE = "#3B82F6";
+const REBIRTH_EMERALD = "#10B981";
+const REBIRTH_AMBER = "#F59E0B";
 const XP_GREEN = "#00FF88";
 const TEXT_PRIMARY = "#E8F4FF";
 const TEXT_SECONDARY = "#6B8CAE";
@@ -27,6 +30,9 @@ export const Colors = {
   prestigeOrange: PRESTIGE_ORANGE,
   rebirth: REBIRTH_PURPLE,
   rebirthPink: REBIRTH_PINK,
+  rebirthBlue: REBIRTH_BLUE,
+  rebirthEmerald: REBIRTH_EMERALD,
+  rebirthAmber: REBIRTH_AMBER,
   xp: XP_GREEN,
   textPrimary: TEXT_PRIMARY,
   textSecondary: TEXT_SECONDARY,

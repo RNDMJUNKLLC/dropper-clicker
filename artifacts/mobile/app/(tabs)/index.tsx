@@ -70,6 +70,10 @@ export default function GameScreen() {
     canPrestige,
     canRebirth1,
     canRebirth2,
+    canRebirth3,
+    canRebirth4,
+    canRebirth5,
+    pointTreeUnlocked,
   } = useGame();
 
   const topPad = Platform.OS === "web" ? 67 : Math.max(insets.top, 20);
@@ -104,7 +108,7 @@ export default function GameScreen() {
     state.prestigeUpgrades.morePP.buys > 0;
 
   const showRebirthSection =
-    canRebirth1 || canRebirth2 || state.rebirthCount > 0;
+    canRebirth1 || canRebirth2 || canRebirth3 || canRebirth4 || canRebirth5 || state.rebirthCount > 0;
 
   const prestigeProgress = Math.min(state.points / 1_000_000, 1);
 
@@ -185,6 +189,11 @@ export default function GameScreen() {
                 <Text style={styles.perkChipText}>AUTO-BUY ACTIVE</Text>
               </View>
             )}
+            {state.rebirthPerks.autoBuyPrestigeUpgrades && (
+              <View style={[styles.perkChip, { backgroundColor: Colors.rebirthBlue + "22", borderColor: Colors.rebirthBlue + "44" }]}>
+                <Text style={[styles.perkChipText, { color: Colors.rebirthBlue }]}>AUTO-BUY PP UPGRADES</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -256,6 +265,19 @@ export default function GameScreen() {
               </View>
               <Text style={styles.lockedProgress}>
                 {formatNumber(state.runPoints)} / {formatNumber(1e25)}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {pointTreeUnlocked && (
+          <View style={styles.section}>
+            <View style={styles.pointTreePlaceholder}>
+              <Text style={styles.pointTreeIcon}>🌳</Text>
+              <Text style={styles.pointTreeTitle}>POINT TREE</Text>
+              <Text style={styles.pointTreeSubtitle}>Coming Soon</Text>
+              <Text style={styles.pointTreeDesc}>
+                Unlock permanent stat boosts that persist across all rebirths
               </Text>
             </View>
           </View>
@@ -403,5 +425,38 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textDim,
     fontFamily: "Inter_400Regular",
+  },
+  pointTreePlaceholder: {
+    borderWidth: 1.5,
+    borderColor: Colors.rebirth + "44",
+    borderRadius: 14,
+    backgroundColor: Colors.bgCard,
+    padding: 24,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  pointTreeIcon: {
+    fontSize: 36,
+  },
+  pointTreeTitle: {
+    fontSize: 14,
+    fontWeight: "700" as const,
+    color: Colors.rebirth,
+    letterSpacing: 3,
+    fontFamily: "Inter_700Bold",
+  },
+  pointTreeSubtitle: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: Colors.textSecondary,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 1,
+  },
+  pointTreeDesc: {
+    fontSize: 12,
+    color: Colors.textDim,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center" as const,
+    lineHeight: 18,
   },
 });

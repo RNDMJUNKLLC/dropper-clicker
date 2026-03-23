@@ -21,6 +21,9 @@ import { formatNumber } from "@/utils/format";
 
 const REBIRTH1_THRESHOLD = 1e25;
 const REBIRTH2_THRESHOLD = 1e50;
+const REBIRTH3_THRESHOLD = 1e75;
+const REBIRTH4_THRESHOLD = 1e100;
+const REBIRTH5_THRESHOLD = 1e150;
 
 function ProgressBar({
   value,
@@ -160,15 +163,15 @@ function RebirthButton({
 }
 
 export default function RebirthSection() {
-  const { state, rebirth, canRebirth1, canRebirth2 } = useGame();
+  const { state, rebirth, canRebirth1, canRebirth2, canRebirth3, canRebirth4, canRebirth5 } = useGame();
 
-  const handleRebirth = (which: 1 | 2) => {
-    const active = which === 1 ? canRebirth1 : canRebirth2;
-    if (!active) return;
+  const handleRebirth = (which: 1 | 2 | 3 | 4 | 5) => {
+    const activeMap = { 1: canRebirth1, 2: canRebirth2, 3: canRebirth3, 4: canRebirth4, 5: canRebirth5 };
+    if (!activeMap[which]) return;
 
     Alert.alert(
       `Rebirth ${which}`,
-      `This resets ALL progress (points, XP, upgrades, prestige, PP). Your new perk is permanently unlocked.`,
+      `This resets ALL progress (points, XP, upgrades, prestige, PP, coins). Your new perks are permanently unlocked.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -187,6 +190,9 @@ export default function RebirthSection() {
 
   const r1Active = state.rebirthPerks.autoBuyUpgrades;
   const r2Active = state.rebirthPerks.bonusMult;
+  const r3Active = state.rebirthPerks.autoBuyPrestigeUpgrades;
+  const r4Active = state.rebirthPerks.tripleMult;
+  const r5Active = state.rebirthPerks.diamondsUnlocked;
 
   return (
     <View style={styles.container}>
@@ -203,7 +209,7 @@ export default function RebirthSection() {
         label="REBIRTH I"
         threshold={REBIRTH1_THRESHOLD}
         runPoints={state.runPoints}
-        perks={["Auto-buy cheapest upgrade every 2s"]}
+        perks={["Auto-buy cheapest upgrade every 2s", "Unlock Coins tab"]}
         color={Colors.rebirth}
         active={canRebirth1}
         unlocked={r1Active}
@@ -214,11 +220,47 @@ export default function RebirthSection() {
         label="REBIRTH II"
         threshold={REBIRTH2_THRESHOLD}
         runPoints={state.runPoints}
-        perks={["3x coins", "2x XP", "2x PP gain"]}
+        perks={["2x XP gain", "2x PP gain"]}
         color={Colors.rebirthPink}
         active={canRebirth2}
         unlocked={r2Active}
         onPress={() => handleRebirth(2)}
+        requiresPrevious
+      />
+
+      <RebirthButton
+        label="REBIRTH III"
+        threshold={REBIRTH3_THRESHOLD}
+        runPoints={state.runPoints}
+        perks={["Auto-buy prestige upgrades", "2x coin gain", "Unlock Point Tree"]}
+        color={Colors.rebirthBlue}
+        active={canRebirth3}
+        unlocked={r3Active}
+        onPress={() => handleRebirth(3)}
+        requiresPrevious
+      />
+
+      <RebirthButton
+        label="REBIRTH IV"
+        threshold={REBIRTH4_THRESHOLD}
+        runPoints={state.runPoints}
+        perks={["3x points", "3x XP", "3x PP gain"]}
+        color={Colors.rebirthEmerald}
+        active={canRebirth4}
+        unlocked={r4Active}
+        onPress={() => handleRebirth(4)}
+        requiresPrevious
+      />
+
+      <RebirthButton
+        label="REBIRTH V"
+        threshold={REBIRTH5_THRESHOLD}
+        runPoints={state.runPoints}
+        perks={["Auto-buy Point Tree upgrades", "Unlock Diamonds"]}
+        color={Colors.rebirthAmber}
+        active={canRebirth5}
+        unlocked={r5Active}
+        onPress={() => handleRebirth(5)}
         requiresPrevious
       />
     </View>
