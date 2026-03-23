@@ -26,6 +26,7 @@ export interface PrestigeUpgrade {
 export interface GameState {
   points: number;
   allTimePoints: number;
+  lifetimePoints: number;
   totalDrops: number;
   xp: number;
   level: number;
@@ -52,7 +53,7 @@ type Action =
   | { type: "BUY_DROP_UPGRADE"; id: DropUpgrade["id"] }
   | { type: "BUY_PRESTIGE_UPGRADE"; id: PrestigeUpgrade["id"] }
   | { type: "PRESTIGE" }
-  | { type: "REBIRTH" }
+  | { type: "REBIRTH"; which: 1 | 2 }
   | { type: "LOAD"; state: GameState };
 
 const XP_BASE = 100;
@@ -114,6 +115,7 @@ const initialPrestigeUpgrades: GameState["prestigeUpgrades"] = {
 const initialState: GameState = {
   points: 0,
   allTimePoints: 0,
+  lifetimePoints: 0,
   totalDrops: 0,
   xp: 0,
   level: 1,
@@ -127,109 +129,146 @@ const initialState: GameState = {
   prestigeUpgrades: initialPrestigeUpgrades,
 };
 
-function applyDrop(state: GameState): GameState {
+function applyDrop(state: GameState): { newState: GameState; leveledUp: boolean } {
   const earned = getDropAmount(state);
   const xpEarned = getXPAmount(state);
   const newPoints = state.points + earned;
   const newAllTime = state.allTimePoints + earned;
+  const newLifetime = state.lifetimePoints + earned;
   let newXP = state.xp + xpEarned;
   let newLevel = state.level;
+  let leveledUp = false;
 
   while (newXP >= xpForLevel(newLevel)) {
     newXP -= xpForLevel(newLevel);
     newLevel++;
+    leveledUp = true;
   }
 
   return {
-    ...state,
-    points: newPoints,
-    allTimePoints: newAllTime,
-    totalDrops: state.totalDrops + 1,
-    xp: newXP,
-    level: newLevel,
+    newState: {
+      ...state,
+      points: newPoints,
+      allTimePoints: newAllTime,
+      lifetimePoints: newLifetime,
+      totalDrops: state.totalDrops + 1,
+      xp: newXP,
+      level: newLevel,
+    },
+    leveledUp,
   };
 }
 
-function reducer(state: GameState, action: Action): GameState {
+function reducer(
+  state: GameState,
+  action: Action
+): { state: GameState; leveledUp: boolean } {
   switch (action.type) {
-    case "DROP":
-      return applyDrop(state);
+    case "DROP": {
+      const { newState, leveledUp } = applyDrop(state);
+      return { state: newState, leveledUp };
+    }
 
     case "BUY_DROP_UPGRADE": {
       const upg = state.dropUpgrades[action.id];
-      if (upg.buys >= upg.maxBuys) return state;
+      if (upg.buys >= upg.maxBuys) return { state, leveledUp: false };
       const cost = dropUpgradeCost(upg);
-      if (state.points < cost) return state;
+      if (state.points < cost) return { state, leveledUp: false };
       return {
-        ...state,
-        points: state.points - cost,
-        dropUpgrades: {
-          ...state.dropUpgrades,
-          [action.id]: { ...upg, buys: upg.buys + 1 },
+        state: {
+          ...state,
+          points: state.points - cost,
+          dropUpgrades: {
+            ...state.dropUpgrades,
+            [action.id]: { ...upg, buys: upg.buys + 1 },
+          },
         },
+        leveledUp: false,
       };
     }
 
     case "BUY_PRESTIGE_UPGRADE": {
       const upg = state.prestigeUpgrades[action.id];
-      if (upg.buys >= upg.maxBuys) return state;
+      if (upg.buys >= upg.maxBuys) return { state, leveledUp: false };
       const cost = prestigeUpgradeCost(upg);
-      const ppMult = Math.pow(2, state.prestigeUpgrades.morePP.buys) * (state.rebirthPerks.bonusMult ? 2 : 1);
-      const effectivePP = state.prestigePoints * ppMult;
-      if (effectivePP < cost) return state;
-      const rawCostInBase = cost / ppMult;
+      if (state.prestigePoints < cost) return { state, leveledUp: false };
       return {
-        ...state,
-        prestigePoints: Math.max(0, state.prestigePoints - rawCostInBase),
-        prestigeUpgrades: {
-          ...state.prestigeUpgrades,
-          [action.id]: { ...upg, buys: upg.buys + 1 },
+        state: {
+          ...state,
+          prestigePoints: state.prestigePoints - cost,
+          prestigeUpgrades: {
+            ...state.prestigeUpgrades,
+            [action.id]: { ...upg, buys: upg.buys + 1 },
+          },
         },
+        leveledUp: false,
       };
     }
 
     case "PRESTIGE": {
-      if (state.allTimePoints < 1_000_000) return state;
-      const earned = calcPrestigePoints(state.allTimePoints);
-      const ppMult = Math.pow(2, state.prestigeUpgrades.morePP.buys) * (state.rebirthPerks.bonusMult ? 2 : 1);
-      const bonusPP = earned * ppMult;
+      if (state.allTimePoints < 1_000_000) return { state, leveledUp: false };
+      const rawEarned = calcPrestigePoints(state.allTimePoints);
+      const ppGainMult = Math.pow(2, state.prestigeUpgrades.morePP.buys) * (state.rebirthPerks.bonusMult ? 2 : 1);
+      const bonusPP = rawEarned * ppGainMult;
       return {
-        ...state,
-        points: 0,
-        allTimePoints: 0,
-        totalDrops: 0,
-        xp: 0,
-        level: 1,
-        prestigePoints: state.prestigePoints + bonusPP,
-        dropUpgrades: initialDropUpgrades,
+        state: {
+          ...state,
+          points: 0,
+          allTimePoints: 0,
+          totalDrops: 0,
+          xp: 0,
+          level: 1,
+          prestigePoints: state.prestigePoints + bonusPP,
+          dropUpgrades: { ...initialDropUpgrades },
+        },
+        leveledUp: false,
       };
     }
 
     case "REBIRTH": {
+      const { which } = action;
+
+      if (which === 1 && state.points < 1e75) return { state, leveledUp: false };
+      if (which === 2 && (state.points < 1e100 || state.rebirthCount < 1)) return { state, leveledUp: false };
+
       const newRebirthCount = state.rebirthCount + 1;
       const autoBuy = newRebirthCount >= 1;
       const bonusMult = newRebirthCount >= 2;
+
       return {
-        ...initialState,
-        rebirthCount: newRebirthCount,
-        rebirthPerks: {
-          autoBuyUpgrades: autoBuy,
-          bonusMult: bonusMult,
+        state: {
+          ...initialState,
+          lifetimePoints: state.lifetimePoints,
+          rebirthCount: newRebirthCount,
+          rebirthPerks: {
+            autoBuyUpgrades: autoBuy,
+            bonusMult: bonusMult,
+          },
         },
-        prestigeUpgrades: {
-          morePoints: { id: "morePoints", buys: 0, maxBuys: 100, baseCost: 1 },
-          moreXP: { id: "moreXP", buys: 0, maxBuys: 100, baseCost: 2 },
-          morePP: { id: "morePP", buys: 0, maxBuys: 25, baseCost: 10 },
-        },
+        leveledUp: false,
       };
     }
 
     case "LOAD":
-      return action.state;
+      return {
+        state: {
+          ...initialState,
+          ...action.state,
+          lifetimePoints: action.state.lifetimePoints ?? action.state.allTimePoints,
+        },
+        leveledUp: false,
+      };
 
     default:
-      return state;
+      return { state, leveledUp: false };
   }
+}
+
+function wrappedReducer(
+  combined: { state: GameState; leveledUp: boolean },
+  action: Action
+): { state: GameState; leveledUp: boolean } {
+  return reducer(combined.state, action);
 }
 
 interface GameContextValue {
@@ -248,13 +287,19 @@ interface GameContextValue {
   canRebirth1: boolean;
   canRebirth2: boolean;
   showUpgrades: boolean;
+  leveledUp: boolean;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
-const STORAGE_KEY = "dropper_game_v2";
+const STORAGE_KEY = "dropper_game_v3";
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [combined, dispatch] = useReducer(wrappedReducer, {
+    state: initialState,
+    leveledUp: false,
+  });
+
+  const { state } = combined;
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoBuyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoDropTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -297,12 +342,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     autoBuyTimerRef.current = setInterval(() => {
       const s = stateRef.current;
       const ids: DropUpgrade["id"][] = ["dropAmount", "dropXP", "dropTimer"];
+      let cheapestId: DropUpgrade["id"] | null = null;
+      let cheapestCost = Infinity;
       for (const id of ids) {
         const upg = s.dropUpgrades[id];
-        if (upg.buys < upg.maxBuys && s.points >= dropUpgradeCost(upg)) {
-          dispatch({ type: "BUY_DROP_UPGRADE", id });
-          break;
+        if (upg.buys >= upg.maxBuys) continue;
+        const cost = dropUpgradeCost(upg);
+        if (cost <= s.points && cost < cheapestCost) {
+          cheapestCost = cost;
+          cheapestId = id;
         }
+      }
+      if (cheapestId) {
+        dispatch({ type: "BUY_DROP_UPGRADE", id: cheapestId });
       }
     }, 2000);
     return () => {
@@ -320,7 +372,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     []
   );
   const prestige = useCallback(() => dispatch({ type: "PRESTIGE" }), []);
-  const rebirth = useCallback((_which: 1 | 2) => dispatch({ type: "REBIRTH" }), []);
+  const rebirth = useCallback(
+    (which: 1 | 2) => dispatch({ type: "REBIRTH", which }),
+    []
+  );
 
   const dropAmount = useMemo(() => getDropAmount(state), [state]);
   const xpAmount = useMemo(() => getXPAmount(state), [state]);
@@ -328,8 +383,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const xpRequired = useMemo(() => xpForLevel(state.level), [state.level]);
   const xpProgress = state.xp / xpRequired;
   const canPrestige = state.allTimePoints >= 1_000_000;
-  const canRebirth1 = state.allTimePoints >= 1e75;
-  const canRebirth2 = state.allTimePoints >= 1e100 && state.rebirthCount >= 1;
+  const canRebirth1 = state.points >= 1e75;
+  const canRebirth2 = state.points >= 1e100 && state.rebirthCount >= 1;
   const showUpgrades = state.totalDrops >= 10;
 
   const value = useMemo(
@@ -349,6 +404,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth1,
       canRebirth2,
       showUpgrades,
+      leveledUp: combined.leveledUp,
     }),
     [
       state,
@@ -366,6 +422,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth1,
       canRebirth2,
       showUpgrades,
+      combined.leveledUp,
     ]
   );
 

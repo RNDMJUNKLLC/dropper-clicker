@@ -6,6 +6,7 @@ import { formatNumber, formatPP, formatTime } from "@/utils/format";
 interface StatsPanelProps {
   points: number;
   allTimePoints: number;
+  lifetimePoints: number;
   prestigePoints: number;
   rebirthCount: number;
   dropAmount: number;
@@ -34,6 +35,7 @@ function Stat({
 export default function StatsPanel({
   points,
   allTimePoints,
+  lifetimePoints,
   prestigePoints,
   rebirthCount,
   dropAmount,
@@ -44,7 +46,7 @@ export default function StatsPanel({
       <View style={styles.row}>
         <Stat label="Points" value={formatNumber(points)} color={Colors.accent} />
         <View style={styles.divider} />
-        <Stat label="All Time" value={formatNumber(allTimePoints)} color={Colors.textPrimary} />
+        <Stat label="Run Total" value={formatNumber(allTimePoints)} color={Colors.textPrimary} />
         <View style={styles.divider} />
         <Stat label="Per Drop" value={formatNumber(dropAmount)} color={Colors.accent} />
       </View>

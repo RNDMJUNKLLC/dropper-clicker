@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import React from "react";
 import {
   Alert,
   Platform,
@@ -18,7 +18,6 @@ import Animated, {
 import Colors from "@/constants/colors";
 import {
   calcPrestigePoints,
-  dropUpgradeCost,
   prestigeUpgradeCost,
   useGame,
 } from "@/context/GameContext";
@@ -72,7 +71,6 @@ function PulseButton({
         style={[
           styles.actionButton,
           { borderColor: active ? color : Colors.bgBorder },
-          active && { shadowColor: color },
         ]}
         activeOpacity={0.8}
       >
@@ -91,16 +89,15 @@ export default function PrestigeSection() {
   const { state, prestige, buyPrestigeUpgrade, canPrestige } = useGame();
 
   const pendingPP = calcPrestigePoints(state.allTimePoints);
-  const ppMult =
+  const ppGainMult =
     Math.pow(2, state.prestigeUpgrades.morePP.buys) *
     (state.rebirthPerks.bonusMult ? 2 : 1);
-  const effectivePP = state.prestigePoints * ppMult;
 
   const handlePrestige = () => {
     if (!canPrestige) return;
     Alert.alert(
       "Prestige",
-      `Reset all base progress and gain ${formatPP(pendingPP * ppMult)} Prestige Points?`,
+      `Reset all base progress and gain ${formatPP(pendingPP * ppGainMult)} Prestige Points?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -133,7 +130,7 @@ export default function PrestigeSection() {
     {
       id: "morePP" as const,
       title: "More PP",
-      description: "x2 prestige pts gain",
+      description: "x2 PP on prestige",
       color: Colors.prestige,
     },
   ];
@@ -148,9 +145,9 @@ export default function PrestigeSection() {
             <Text style={styles.ppLabel}> PP</Text>
           </View>
         </View>
-        {effectivePP !== state.prestigePoints && (
+        {ppGainMult > 1 && (
           <Text style={styles.effectiveNote}>
-            Effective PP: {formatPP(effectivePP)} (x{ppMult} from upgrades)
+            PP gain multiplier: x{ppGainMult.toFixed(0)} (from upgrades)
           </Text>
         )}
       </View>
@@ -160,7 +157,7 @@ export default function PrestigeSection() {
         label="PRESTIGE"
         sublabel={
           canPrestige
-            ? `+${formatPP(pendingPP * ppMult)} PP`
+            ? `+${formatPP(pendingPP * ppGainMult)} PP`
             : `Need ${formatNumber(1_000_000)} all-time pts`
         }
         color={Colors.prestige}
@@ -171,7 +168,7 @@ export default function PrestigeSection() {
         {upgrades.map((upg) => {
           const upgrade = state.prestigeUpgrades[upg.id];
           const cost = prestigeUpgradeCost(upgrade);
-          const canAfford = effectivePP >= cost;
+          const canAfford = state.prestigePoints >= cost;
           return (
             <UpgradeCard
               key={upg.id}
@@ -256,10 +253,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgCard,
     alignItems: "center",
     gap: 4,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
   },
   actionLabel: {
     fontSize: 15,

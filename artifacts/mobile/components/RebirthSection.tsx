@@ -68,7 +68,6 @@ function RebirthButton({
         style={[
           styles.rebirthButton,
           { borderColor: active ? color : Colors.bgBorder },
-          active && { shadowColor: color },
         ]}
         activeOpacity={0.8}
       >
@@ -111,7 +110,7 @@ export default function RebirthSection() {
 
     Alert.alert(
       `Rebirth ${which}`,
-      `This will reset ALL progress below Rebirth (points, XP, upgrades, prestige). Your ${which === 2 ? "first rebirth perk and " : ""}new perk will be permanently unlocked.`,
+      `This resets ALL progress (points, XP, upgrades, prestige, PP). Your new perk is permanently unlocked.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -144,8 +143,8 @@ export default function RebirthSection() {
 
       <RebirthButton
         label="REBIRTH I"
-        requirement={`Need ${formatNumber(1e75)} all-time pts`}
-        perks={["Auto-buy upgrades every 2s"]}
+        requirement={`Need ${formatNumber(1e75)} current points`}
+        perks={["Auto-buy cheapest upgrade every 2s"]}
         color={Colors.rebirth}
         active={canRebirth1}
         unlocked={r1Active}
@@ -154,8 +153,8 @@ export default function RebirthSection() {
 
       <RebirthButton
         label="REBIRTH II"
-        requirement={`Need ${formatNumber(1e100)} all-time pts + Rebirth I`}
-        perks={["3x coins", "2x XP", "2x PP"]}
+        requirement={`Need ${formatNumber(1e100)} current pts + Rebirth I`}
+        perks={["3x coins", "2x XP", "2x PP gain"]}
         color={Colors.rebirthPink}
         active={canRebirth2}
         unlocked={r2Active}
@@ -213,10 +212,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     backgroundColor: Colors.bgCard,
     gap: 8,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
   },
   rebirthHeader: {
     flexDirection: "row",

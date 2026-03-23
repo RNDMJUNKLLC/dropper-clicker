@@ -1,4 +1,5 @@
-import React, { useCallback, useRef } from "react";
+import * as Haptics from "expo-haptics";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   Platform,
   ScrollView,
@@ -6,6 +7,12 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import DropButton from "@/components/DropButton";
@@ -16,6 +23,36 @@ import UpgradeCard from "@/components/UpgradeCard";
 import XPBar from "@/components/XPBar";
 import { dropUpgradeCost, useGame } from "@/context/GameContext";
 import { formatNumber, formatTime } from "@/utils/format";
+
+function LevelUpFlash() {
+  const opacity = useSharedValue(0);
+  const prevLeveledUp = useRef(false);
+  const { leveledUp } = useGame();
+
+  useEffect(() => {
+    if (leveledUp && !prevLeveledUp.current) {
+      opacity.value = withSequence(
+        withTiming(0.45, { duration: 80 }),
+        withTiming(0, { duration: 500 })
+      );
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    }
+    prevLeveledUp.current = leveledUp;
+  }, [leveledUp]);
+
+  const flashStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View
+      style={[StyleSheet.absoluteFillObject, styles.levelFlash, flashStyle]}
+      pointerEvents="none"
+    />
+  );
+}
 
 export default function GameScreen() {
   const insets = useSafeAreaInsets();
@@ -53,13 +90,25 @@ export default function GameScreen() {
     {
       id: "dropTimer" as const,
       title: "Rapid Drop",
-      description: `−0.5s/drop\nCurrent: ${formatTime(dropTimerMs)}`,
+      description: `-0.5s/upgrade\nCurrent: ${formatTime(dropTimerMs)}`,
       color: Colors.accentDim,
     },
   ];
 
+  const showPrestigeSection =
+    canPrestige ||
+    state.prestigePoints > 0 ||
+    state.prestigeUpgrades.morePoints.buys > 0;
+
+  const showRebirthSection =
+    canRebirth1 || canRebirth2 || state.rebirthCount > 0;
+
+  const prestigeProgress = Math.min(state.allTimePoints / 1_000_000, 1);
+
   return (
     <View style={[styles.root, { paddingTop: topPad }]}>
+      <LevelUpFlash />
+
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: botPad + 100 }]}
         showsVerticalScrollIndicator={false}
@@ -95,6 +144,7 @@ export default function GameScreen() {
         <StatsPanel
           points={state.points}
           allTimePoints={state.allTimePoints}
+          lifetimePoints={state.lifetimePoints}
           prestigePoints={state.prestigePoints}
           rebirthCount={state.rebirthCount}
           dropAmount={dropAmount}
@@ -133,7 +183,7 @@ export default function GameScreen() {
           </View>
         )}
 
-        {canPrestige || state.prestigePoints > 0 || state.prestigeUpgrades.morePoints.buys > 0 ? (
+        {showPrestigeSection ? (
           <View style={styles.section}>
             <PrestigeSection />
           </View>
@@ -149,7 +199,7 @@ export default function GameScreen() {
                   style={[
                     styles.progressFill,
                     {
-                      width: `${Math.min((state.allTimePoints / 1_000_000) * 100, 100)}%`,
+                      width: `${prestigeProgress * 100}%`,
                       backgroundColor: Colors.prestige,
                     },
                   ]}
@@ -162,16 +212,16 @@ export default function GameScreen() {
           </View>
         )}
 
-        {canRebirth1 || canRebirth2 || state.rebirthCount > 0 ? (
+        {showRebirthSection ? (
           <View style={styles.section}>
             <RebirthSection />
           </View>
         ) : (
           <View style={styles.section}>
-            <View style={styles.lockedHint}>
+            <View style={[styles.lockedHint, { borderColor: Colors.rebirth + "33" }]}>
               <Text style={[styles.lockedTitle, { color: Colors.rebirth }]}>REBIRTH</Text>
               <Text style={styles.lockedText}>
-                Rebirth I at {formatNumber(1e75)} all-time pts
+                Rebirth I requires {formatNumber(1e75)} current points
               </Text>
             </View>
           </View>
@@ -185,6 +235,11 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.bg,
+  },
+  levelFlash: {
+    zIndex: 999,
+    backgroundColor: Colors.xp,
+    borderRadius: 0,
   },
   scroll: {
     padding: 20,
