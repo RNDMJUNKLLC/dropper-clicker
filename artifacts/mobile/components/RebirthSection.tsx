@@ -59,7 +59,7 @@ function RebirthButton({
   active,
   onPress,
   unlocked,
-  requiresPrevious,
+  requiresText,
 }: {
   label: string;
   threshold: number;
@@ -69,7 +69,7 @@ function RebirthButton({
   active: boolean;
   onPress: () => void;
   unlocked: boolean;
-  requiresPrevious?: boolean;
+  requiresText?: string;
 }) {
   const glow = useSharedValue(0.4);
 
@@ -133,7 +133,7 @@ function RebirthButton({
             ]}
           >
             {formatNumber(runPoints)} / {formatNumber(threshold)} run pts
-            {requiresPrevious ? " + Rebirth I" : ""}
+            {requiresText ? ` + ${requiresText}` : ""}
           </Text>
         </View>
 
@@ -225,7 +225,7 @@ export default function RebirthSection() {
         active={canRebirth2}
         unlocked={r2Active}
         onPress={() => handleRebirth(2)}
-        requiresPrevious
+        requiresText="Rebirth I"
       />
 
       <RebirthButton
@@ -237,7 +237,7 @@ export default function RebirthSection() {
         active={canRebirth3}
         unlocked={r3Active}
         onPress={() => handleRebirth(3)}
-        requiresPrevious
+        requiresText="2 Rebirths"
       />
 
       <RebirthButton
@@ -249,7 +249,7 @@ export default function RebirthSection() {
         active={canRebirth4}
         unlocked={r4Active}
         onPress={() => handleRebirth(4)}
-        requiresPrevious
+        requiresText="3 Rebirths"
       />
 
       <RebirthButton
@@ -261,7 +261,7 @@ export default function RebirthSection() {
         active={canRebirth5}
         unlocked={r5Active}
         onPress={() => handleRebirth(5)}
-        requiresPrevious
+        requiresText="4 Rebirths"
       />
     </View>
   );

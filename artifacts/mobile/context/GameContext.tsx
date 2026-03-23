@@ -346,16 +346,22 @@ function reducer(
       };
     }
 
-    case "LOAD":
+    case "LOAD": {
+      const loadedPerks = action.state.rebirthPerks ?? {};
       return {
         state: {
           ...initialState,
           ...action.state,
           lifetimePoints: action.state.lifetimePoints ?? action.state.runPoints ?? 0,
           runPoints: action.state.runPoints ?? 0,
+          rebirthPerks: {
+            ...initialState.rebirthPerks,
+            ...loadedPerks,
+          },
         },
         leveledUp: false,
       };
+    }
 
     default:
       return { state, leveledUp: false };
