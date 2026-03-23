@@ -27,6 +27,7 @@ export interface GameState {
   points: number;
   runPoints: number;
   lifetimePoints: number;
+  lifetimeAtLastPrestige: number;
   totalDrops: number;
   xp: number;
   level: number;
@@ -116,6 +117,7 @@ const initialState: GameState = {
   points: 0,
   runPoints: 0,
   lifetimePoints: 0,
+  lifetimeAtLastPrestige: 0,
   totalDrops: 0,
   xp: 0,
   level: 1,
@@ -209,6 +211,8 @@ function reducer(
 
     case "PRESTIGE": {
       if (state.lifetimePoints < 1_000_000) return { state, leveledUp: false };
+      if (state.lifetimePoints <= state.lifetimeAtLastPrestige)
+        return { state, leveledUp: false };
       const rawEarned = calcPrestigePoints(state.lifetimePoints);
       const ppGainMult =
         Math.pow(2, state.prestigeUpgrades.morePP.buys) *
@@ -223,6 +227,7 @@ function reducer(
           xp: 0,
           level: 1,
           prestigePoints: state.prestigePoints + bonusPP,
+          lifetimeAtLastPrestige: state.lifetimePoints,
           dropUpgrades: { ...initialDropUpgrades },
         },
         leveledUp: false,
@@ -244,6 +249,7 @@ function reducer(
         state: {
           ...initialState,
           lifetimePoints: state.lifetimePoints,
+          lifetimeAtLastPrestige: state.lifetimePoints,
           rebirthCount: newRebirthCount,
           rebirthPerks: { autoBuyUpgrades, bonusMult },
         },
@@ -257,6 +263,7 @@ function reducer(
           ...initialState,
           ...action.state,
           lifetimePoints: action.state.lifetimePoints ?? action.state.runPoints ?? 0,
+          lifetimeAtLastPrestige: action.state.lifetimeAtLastPrestige ?? 0,
           runPoints: action.state.runPoints ?? 0,
         },
         leveledUp: false,
@@ -386,7 +393,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const dropTimerMs = useMemo(() => getDropTimerMs(state), [state]);
   const xpRequired = useMemo(() => xpForLevel(state.level), [state.level]);
   const xpProgress = state.xp / xpRequired;
-  const canPrestige = state.lifetimePoints >= 1_000_000;
+  const canPrestige =
+    state.lifetimePoints >= 1_000_000 &&
+    state.lifetimePoints > state.lifetimeAtLastPrestige;
   const canRebirth1 = state.runPoints >= 1e75;
   const canRebirth2 = state.runPoints >= 1e100 && state.rebirthCount >= 1;
   const showUpgrades = state.totalDrops >= 10;
