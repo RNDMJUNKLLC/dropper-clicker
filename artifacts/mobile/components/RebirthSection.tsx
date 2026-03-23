@@ -19,8 +19,8 @@ import Colors from "@/constants/colors";
 import { useGame } from "@/context/GameContext";
 import { formatNumber } from "@/utils/format";
 
-const REBIRTH1_THRESHOLD = 1e75;
-const REBIRTH2_THRESHOLD = 1e100;
+const REBIRTH1_THRESHOLD = 1e25;
+const REBIRTH2_THRESHOLD = 1e50;
 
 function ProgressBar({
   value,

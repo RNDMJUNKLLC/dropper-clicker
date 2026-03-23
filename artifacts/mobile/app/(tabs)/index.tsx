@@ -106,7 +106,7 @@ export default function GameScreen() {
   const showRebirthSection =
     canRebirth1 || canRebirth2 || state.rebirthCount > 0;
 
-  const prestigeProgress = Math.min(state.lifetimePoints / 1_000_000, 1);
+  const prestigeProgress = Math.min(state.points / 1_000_000, 1);
 
   return (
     <View style={[styles.root, { paddingTop: topPad }]}>
@@ -197,7 +197,7 @@ export default function GameScreen() {
             <View style={styles.lockedHint}>
               <Text style={styles.lockedTitle}>PRESTIGE</Text>
               <Text style={styles.lockedText}>
-                Unlock at {formatNumber(1_000_000)} lifetime points
+                Unlock at {formatNumber(1_000_000)} current points
               </Text>
               <View style={styles.progressBar}>
                 <View
@@ -211,7 +211,7 @@ export default function GameScreen() {
                 />
               </View>
               <Text style={styles.lockedProgress}>
-                {formatNumber(state.lifetimePoints)} / {formatNumber(1_000_000)}
+                {formatNumber(state.points)} / {formatNumber(1_000_000)}
               </Text>
             </View>
           </View>
@@ -233,7 +233,7 @@ export default function GameScreen() {
                 REBIRTH
               </Text>
               <Text style={styles.lockedText}>
-                Rebirth I requires {formatNumber(1e75)} run points
+                Rebirth I requires {formatNumber(1e25)} run points
               </Text>
               <View style={styles.progressBar}>
                 <View
@@ -244,7 +244,7 @@ export default function GameScreen() {
                         state.runPoints > 0
                           ? Math.min(
                               Math.log10(state.runPoints + 1) /
-                                Math.log10(1e75 + 1),
+                                Math.log10(1e25 + 1),
                               1
                             ) * 100
                           : 0
@@ -255,7 +255,7 @@ export default function GameScreen() {
                 />
               </View>
               <Text style={styles.lockedProgress}>
-                {formatNumber(state.runPoints)} / {formatNumber(1e75)}
+                {formatNumber(state.runPoints)} / {formatNumber(1e25)}
               </Text>
             </View>
           </View>
