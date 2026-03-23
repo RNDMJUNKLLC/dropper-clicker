@@ -85,7 +85,7 @@ export default function GameScreen() {
     {
       id: "dropXP" as const,
       title: "XP Surge",
-      description: `x1.5 XP/drop\nCurrent: x${Math.pow(1.5, state.dropUpgrades.dropXP.buys).toFixed(2)}`,
+      description: `+50% XP/drop\nCurrent: x${(1 + 0.5 * state.dropUpgrades.dropXP.buys).toFixed(2)}`,
       color: Colors.xp,
     },
     {

@@ -67,7 +67,7 @@ export function xpForLevel(level: number): number {
 }
 
 export function getLevelMultiplier(level: number): number {
-  return Math.pow(level, 0.5);
+  return Math.pow(2, level - 1);
 }
 
 export function dropUpgradeCost(upgrade: DropUpgrade): number {
@@ -91,7 +91,7 @@ function getDropAmount(state: GameState): number {
 }
 
 function getXPAmount(state: GameState): number {
-  const baseXP = 1 * Math.pow(1.5, state.dropUpgrades.dropXP.buys);
+  const baseXP = 1 + 0.5 * state.dropUpgrades.dropXP.buys;
   const prestigeMult = Math.pow(2, state.prestigeUpgrades.moreXP.buys);
   const rebirthMult = state.rebirthPerks.bonusMult ? 2 : 1;
   return baseXP * prestigeMult * rebirthMult;
