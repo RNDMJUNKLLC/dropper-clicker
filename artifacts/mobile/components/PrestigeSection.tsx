@@ -74,10 +74,20 @@ function PulseButton({
         ]}
         activeOpacity={0.8}
       >
-        <Text style={[styles.actionLabel, { color: active ? color : Colors.textDim }]}>
+        <Text
+          style={[
+            styles.actionLabel,
+            { color: active ? color : Colors.textDim },
+          ]}
+        >
           {label}
         </Text>
-        <Text style={[styles.actionSub, { color: active ? color + "AA" : Colors.textDim }]}>
+        <Text
+          style={[
+            styles.actionSub,
+            { color: active ? color + "AA" : Colors.textDim },
+          ]}
+        >
           {sublabel}
         </Text>
       </TouchableOpacity>
@@ -88,16 +98,17 @@ function PulseButton({
 export default function PrestigeSection() {
   const { state, prestige, buyPrestigeUpgrade, canPrestige } = useGame();
 
-  const pendingPP = calcPrestigePoints(state.allTimePoints);
+  const rawPP = calcPrestigePoints(state.lifetimePoints);
   const ppGainMult =
     Math.pow(2, state.prestigeUpgrades.morePP.buys) *
     (state.rebirthPerks.bonusMult ? 2 : 1);
+  const totalPPGain = rawPP * ppGainMult;
 
   const handlePrestige = () => {
     if (!canPrestige) return;
     Alert.alert(
       "Prestige",
-      `Reset all base progress and gain ${formatPP(pendingPP * ppGainMult)} Prestige Points?`,
+      `Reset all base progress and gain ${formatPP(totalPPGain)} Prestige Points?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -130,7 +141,7 @@ export default function PrestigeSection() {
     {
       id: "morePP" as const,
       title: "More PP",
-      description: "x2 PP on prestige",
+      description: "x2 PP gain on prestige",
       color: Colors.prestige,
     },
   ];
@@ -147,7 +158,7 @@ export default function PrestigeSection() {
         </View>
         {ppGainMult > 1 && (
           <Text style={styles.effectiveNote}>
-            PP gain multiplier: x{ppGainMult.toFixed(0)} (from upgrades)
+            PP gain: x{ppGainMult.toFixed(0)} (from upgrades/rebirth)
           </Text>
         )}
       </View>
@@ -157,8 +168,8 @@ export default function PrestigeSection() {
         label="PRESTIGE"
         sublabel={
           canPrestige
-            ? `+${formatPP(pendingPP * ppGainMult)} PP`
-            : `Need ${formatNumber(1_000_000)} all-time pts`
+            ? `+${formatPP(totalPPGain)} PP`
+            : `Need ${formatNumber(1_000_000)} lifetime pts`
         }
         color={Colors.prestige}
         active={canPrestige}

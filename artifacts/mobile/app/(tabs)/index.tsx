@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Platform,
   ScrollView,
@@ -103,7 +103,7 @@ export default function GameScreen() {
   const showRebirthSection =
     canRebirth1 || canRebirth2 || state.rebirthCount > 0;
 
-  const prestigeProgress = Math.min(state.allTimePoints / 1_000_000, 1);
+  const prestigeProgress = Math.min(state.lifetimePoints / 1_000_000, 1);
 
   return (
     <View style={[styles.root, { paddingTop: topPad }]}>
@@ -136,14 +136,15 @@ export default function GameScreen() {
           <DropButton onDrop={drop} dropAmount={dropAmount} />
           <View style={styles.dropMeta}>
             <Text style={styles.dropMetaText}>
-              AUTO: {formatTime(dropTimerMs)} · +{formatNumber(dropAmount)} pts · +{formatNumber(xpAmount)} XP
+              AUTO: {formatTime(dropTimerMs)} · +{formatNumber(dropAmount)} pts ·
+              +{formatNumber(xpAmount)} XP
             </Text>
           </View>
         </View>
 
         <StatsPanel
           points={state.points}
-          allTimePoints={state.allTimePoints}
+          runPoints={state.runPoints}
           lifetimePoints={state.lifetimePoints}
           prestigePoints={state.prestigePoints}
           rebirthCount={state.rebirthCount}
@@ -192,7 +193,7 @@ export default function GameScreen() {
             <View style={styles.lockedHint}>
               <Text style={styles.lockedTitle}>PRESTIGE</Text>
               <Text style={styles.lockedText}>
-                Unlock at {formatNumber(1_000_000)} all-time points
+                Unlock at {formatNumber(1_000_000)} lifetime points
               </Text>
               <View style={styles.progressBar}>
                 <View
@@ -206,7 +207,8 @@ export default function GameScreen() {
                 />
               </View>
               <Text style={styles.lockedProgress}>
-                {formatNumber(state.allTimePoints)} / {formatNumber(1_000_000)}
+                {formatNumber(state.lifetimePoints)} /{" "}
+                {formatNumber(1_000_000)}
               </Text>
             </View>
           </View>
@@ -218,8 +220,15 @@ export default function GameScreen() {
           </View>
         ) : (
           <View style={styles.section}>
-            <View style={[styles.lockedHint, { borderColor: Colors.rebirth + "33" }]}>
-              <Text style={[styles.lockedTitle, { color: Colors.rebirth }]}>REBIRTH</Text>
+            <View
+              style={[
+                styles.lockedHint,
+                { borderColor: Colors.rebirth + "33" },
+              ]}
+            >
+              <Text style={[styles.lockedTitle, { color: Colors.rebirth }]}>
+                REBIRTH
+              </Text>
               <Text style={styles.lockedText}>
                 Rebirth I requires {formatNumber(1e75)} current points
               </Text>
@@ -239,7 +248,6 @@ const styles = StyleSheet.create({
   levelFlash: {
     zIndex: 999,
     backgroundColor: Colors.xp,
-    borderRadius: 0,
   },
   scroll: {
     padding: 20,

@@ -5,7 +5,7 @@ import { formatNumber, formatPP, formatTime } from "@/utils/format";
 
 interface StatsPanelProps {
   points: number;
-  allTimePoints: number;
+  runPoints: number;
   lifetimePoints: number;
   prestigePoints: number;
   rebirthCount: number;
@@ -34,7 +34,7 @@ function Stat({
 
 export default function StatsPanel({
   points,
-  allTimePoints,
+  runPoints,
   lifetimePoints,
   prestigePoints,
   rebirthCount,
@@ -46,17 +46,21 @@ export default function StatsPanel({
       <View style={styles.row}>
         <Stat label="Points" value={formatNumber(points)} color={Colors.accent} />
         <View style={styles.divider} />
-        <Stat label="Run Total" value={formatNumber(allTimePoints)} color={Colors.textPrimary} />
+        <Stat label="Run Total" value={formatNumber(runPoints)} />
         <View style={styles.divider} />
         <Stat label="Per Drop" value={formatNumber(dropAmount)} color={Colors.accent} />
       </View>
       <View style={styles.separator} />
       <View style={styles.row}>
+        <Stat label="Lifetime" value={formatNumber(lifetimePoints)} color={Colors.xp} />
+        <View style={styles.divider} />
         <Stat label="PP" value={formatPP(prestigePoints)} color={Colors.prestige} />
         <View style={styles.divider} />
         <Stat label="Rebirths" value={String(rebirthCount)} color={Colors.rebirth} />
-        <View style={styles.divider} />
-        <Stat label="Auto Drop" value={formatTime(dropTimerMs)} color={Colors.xp} />
+      </View>
+      <View style={styles.separator} />
+      <View style={styles.row}>
+        <Stat label="Auto Drop" value={formatTime(dropTimerMs)} color={Colors.accentDim} />
       </View>
     </View>
   );
@@ -70,7 +74,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: Colors.bgBorder,
-    gap: 0,
   },
   row: {
     flexDirection: "row",
