@@ -230,7 +230,29 @@ export default function GameScreen() {
                 REBIRTH
               </Text>
               <Text style={styles.lockedText}>
-                Rebirth I requires {formatNumber(1e75)} current points
+                Rebirth I requires {formatNumber(1e75)} run points
+              </Text>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${
+                        state.runPoints > 0
+                          ? Math.min(
+                              Math.log10(state.runPoints + 1) /
+                                Math.log10(1e75 + 1),
+                              1
+                            ) * 100
+                          : 0
+                      }%`,
+                      backgroundColor: Colors.rebirth,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.lockedProgress}>
+                {formatNumber(state.runPoints)} / {formatNumber(1e75)}
               </Text>
             </View>
           </View>

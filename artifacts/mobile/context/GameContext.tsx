@@ -232,8 +232,8 @@ function reducer(
     case "REBIRTH": {
       const { which } = action;
 
-      if (which === 1 && state.points < 1e75) return { state, leveledUp: false };
-      if (which === 2 && (state.points < 1e100 || state.rebirthCount < 1))
+      if (which === 1 && state.runPoints < 1e75) return { state, leveledUp: false };
+      if (which === 2 && (state.runPoints < 1e100 || state.rebirthCount < 1))
         return { state, leveledUp: false };
 
       const newRebirthCount = state.rebirthCount + 1;
@@ -395,8 +395,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const xpRequired = useMemo(() => xpForLevel(state.level), [state.level]);
   const xpProgress = state.xp / xpRequired;
   const canPrestige = state.lifetimePoints >= 1_000_000;
-  const canRebirth1 = state.points >= 1e75;
-  const canRebirth2 = state.points >= 1e100 && state.rebirthCount >= 1;
+  const canRebirth1 = state.runPoints >= 1e75;
+  const canRebirth2 = state.runPoints >= 1e100 && state.rebirthCount >= 1;
   const showUpgrades = state.totalDrops >= 10;
 
   const value = useMemo(

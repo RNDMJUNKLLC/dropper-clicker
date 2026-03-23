@@ -19,22 +19,54 @@ import Colors from "@/constants/colors";
 import { useGame } from "@/context/GameContext";
 import { formatNumber } from "@/utils/format";
 
+const REBIRTH1_THRESHOLD = 1e75;
+const REBIRTH2_THRESHOLD = 1e100;
+
+function ProgressBar({
+  value,
+  max,
+  color,
+}: {
+  value: number;
+  max: number;
+  color: string;
+}) {
+  const logProgress =
+    value <= 0
+      ? 0
+      : Math.min(Math.log10(value + 1) / Math.log10(max + 1), 1);
+  return (
+    <View style={styles.progressBar}>
+      <View
+        style={[
+          styles.progressFill,
+          { width: `${logProgress * 100}%`, backgroundColor: color },
+        ]}
+      />
+    </View>
+  );
+}
+
 function RebirthButton({
   label,
-  requirement,
+  threshold,
+  runPoints,
   perks,
   color,
   active,
   onPress,
   unlocked,
+  requiresPrevious,
 }: {
   label: string;
-  requirement: string;
+  threshold: number;
+  runPoints: number;
   perks: string[];
   color: string;
   active: boolean;
   onPress: () => void;
   unlocked: boolean;
+  requiresPrevious?: boolean;
 }) {
   const glow = useSharedValue(0.4);
 
@@ -60,7 +92,9 @@ function RebirthButton({
   return (
     <View style={styles.rebirthWrapper}>
       {active && (
-        <Animated.View style={[styles.rebirthRing, { borderColor: color }, ringStyle]} />
+        <Animated.View
+          style={[styles.rebirthRing, { borderColor: color }, ringStyle]}
+        />
       )}
       <TouchableOpacity
         onPress={onPress}
@@ -72,7 +106,12 @@ function RebirthButton({
         activeOpacity={0.8}
       >
         <View style={styles.rebirthHeader}>
-          <Text style={[styles.rebirthLabel, { color: active ? color : Colors.textDim }]}>
+          <Text
+            style={[
+              styles.rebirthLabel,
+              { color: active ? color : Colors.textDim },
+            ]}
+          >
             {label}
           </Text>
           {unlocked && (
@@ -82,15 +121,34 @@ function RebirthButton({
           )}
         </View>
 
-        <Text style={[styles.rebirthReq, { color: active ? color + "CC" : Colors.textDim }]}>
-          {requirement}
-        </Text>
+        <View style={styles.progressSection}>
+          <ProgressBar value={runPoints} max={threshold} color={color} />
+          <Text
+            style={[
+              styles.progressText,
+              { color: active ? color + "CC" : Colors.textDim },
+            ]}
+          >
+            {formatNumber(runPoints)} / {formatNumber(threshold)} run pts
+            {requiresPrevious ? " + Rebirth I" : ""}
+          </Text>
+        </View>
 
         <View style={styles.perksContainer}>
           {perks.map((perk, i) => (
             <View key={i} style={styles.perkRow}>
-              <View style={[styles.perkDot, { backgroundColor: unlocked ? color : Colors.textDim }]} />
-              <Text style={[styles.perkText, { color: unlocked ? Colors.textPrimary : Colors.textDim }]}>
+              <View
+                style={[
+                  styles.perkDot,
+                  { backgroundColor: unlocked ? color : Colors.textDim },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.perkText,
+                  { color: unlocked ? Colors.textPrimary : Colors.textDim },
+                ]}
+              >
                 {perk}
               </Text>
             </View>
@@ -143,7 +201,8 @@ export default function RebirthSection() {
 
       <RebirthButton
         label="REBIRTH I"
-        requirement={`Need ${formatNumber(1e75)} current points`}
+        threshold={REBIRTH1_THRESHOLD}
+        runPoints={state.runPoints}
         perks={["Auto-buy cheapest upgrade every 2s"]}
         color={Colors.rebirth}
         active={canRebirth1}
@@ -153,12 +212,14 @@ export default function RebirthSection() {
 
       <RebirthButton
         label="REBIRTH II"
-        requirement={`Need ${formatNumber(1e100)} current pts + Rebirth I`}
+        threshold={REBIRTH2_THRESHOLD}
+        runPoints={state.runPoints}
         perks={["3x coins", "2x XP", "2x PP gain"]}
         color={Colors.rebirthPink}
         active={canRebirth2}
         unlocked={r2Active}
         onPress={() => handleRebirth(2)}
+        requiresPrevious
       />
     </View>
   );
@@ -235,8 +296,21 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     letterSpacing: 1,
   },
-  rebirthReq: {
-    fontSize: 11,
+  progressSection: {
+    gap: 4,
+  },
+  progressBar: {
+    height: 5,
+    backgroundColor: Colors.bgBorder,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 10,
     fontFamily: "Inter_400Regular",
   },
   perksContainer: {
