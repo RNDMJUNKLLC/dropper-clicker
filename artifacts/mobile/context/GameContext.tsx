@@ -27,6 +27,7 @@ export interface GameState {
   points: number;
   runPoints: number;
   lifetimePoints: number;
+  lastPrestigeLifetimePoints: number;
   totalDrops: number;
   xp: number;
   level: number;
@@ -116,6 +117,7 @@ const initialState: GameState = {
   points: 0,
   runPoints: 0,
   lifetimePoints: 0,
+  lastPrestigeLifetimePoints: 0,
   totalDrops: 0,
   xp: 0,
   level: 1,
@@ -208,8 +210,10 @@ function reducer(
     }
 
     case "PRESTIGE": {
-      if (state.lifetimePoints < 1_000_000) return { state, leveledUp: false };
-      const rawEarned = calcPrestigePoints(state.lifetimePoints);
+      const sinceLastPrestige =
+        state.lifetimePoints - state.lastPrestigeLifetimePoints;
+      if (sinceLastPrestige < 1_000_000) return { state, leveledUp: false };
+      const rawEarned = calcPrestigePoints(sinceLastPrestige);
       const ppGainMult =
         Math.pow(2, state.prestigeUpgrades.morePP.buys) *
         (state.rebirthPerks.bonusMult ? 2 : 1);
@@ -223,6 +227,7 @@ function reducer(
           xp: 0,
           level: 1,
           prestigePoints: state.prestigePoints + bonusPP,
+          lastPrestigeLifetimePoints: state.lifetimePoints,
           dropUpgrades: { ...initialDropUpgrades },
         },
         leveledUp: false,
