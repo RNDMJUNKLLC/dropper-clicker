@@ -251,6 +251,7 @@ function reducer(
         state: {
           ...initialState,
           lifetimePoints: state.lifetimePoints,
+          lastPrestigeLifetimePoints: state.lifetimePoints,
           rebirthCount: newRebirthCount,
           rebirthPerks: {
             autoBuyUpgrades,
@@ -266,11 +267,9 @@ function reducer(
         state: {
           ...initialState,
           ...action.state,
-          lifetimePoints:
-            action.state.lifetimePoints ??
-            action.state.runPoints ??
-            0,
+          lifetimePoints: action.state.lifetimePoints ?? action.state.runPoints ?? 0,
           runPoints: action.state.runPoints ?? 0,
+          lastPrestigeLifetimePoints: action.state.lastPrestigeLifetimePoints ?? 0,
         },
         leveledUp: false,
       };
@@ -304,6 +303,7 @@ interface GameContextValue {
   canRebirth2: boolean;
   showUpgrades: boolean;
   leveledUp: boolean;
+  prestigeDelta: number;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -399,7 +399,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const dropTimerMs = useMemo(() => getDropTimerMs(state), [state]);
   const xpRequired = useMemo(() => xpForLevel(state.level), [state.level]);
   const xpProgress = state.xp / xpRequired;
-  const canPrestige = state.lifetimePoints >= 1_000_000;
+  const prestigeDelta = state.lifetimePoints - state.lastPrestigeLifetimePoints;
+  const canPrestige = prestigeDelta >= 1_000_000;
   const canRebirth1 = state.runPoints >= 1e75;
   const canRebirth2 = state.runPoints >= 1e100 && state.rebirthCount >= 1;
   const showUpgrades = state.totalDrops >= 10;
@@ -422,6 +423,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth2,
       showUpgrades,
       leveledUp: combined.leveledUp,
+      prestigeDelta,
     }),
     [
       state,
@@ -440,6 +442,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth2,
       showUpgrades,
       combined.leveledUp,
+      prestigeDelta,
     ]
   );
 

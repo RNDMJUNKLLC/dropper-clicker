@@ -69,6 +69,7 @@ export default function GameScreen() {
     canPrestige,
     canRebirth1,
     canRebirth2,
+    prestigeDelta,
   } = useGame();
 
   const topPad = Platform.OS === "web" ? 67 : Math.max(insets.top, 20);
@@ -98,12 +99,14 @@ export default function GameScreen() {
   const showPrestigeSection =
     canPrestige ||
     state.prestigePoints > 0 ||
-    state.prestigeUpgrades.morePoints.buys > 0;
+    state.prestigeUpgrades.morePoints.buys > 0 ||
+    state.prestigeUpgrades.moreXP.buys > 0 ||
+    state.prestigeUpgrades.morePP.buys > 0;
 
   const showRebirthSection =
     canRebirth1 || canRebirth2 || state.rebirthCount > 0;
 
-  const prestigeProgress = Math.min(state.lifetimePoints / 1_000_000, 1);
+  const prestigeProgress = Math.min(prestigeDelta / 1_000_000, 1);
 
   return (
     <View style={[styles.root, { paddingTop: topPad }]}>
@@ -193,7 +196,7 @@ export default function GameScreen() {
             <View style={styles.lockedHint}>
               <Text style={styles.lockedTitle}>PRESTIGE</Text>
               <Text style={styles.lockedText}>
-                Unlock at {formatNumber(1_000_000)} lifetime points
+                Unlock at {formatNumber(1_000_000)} points (since last prestige)
               </Text>
               <View style={styles.progressBar}>
                 <View
@@ -207,8 +210,7 @@ export default function GameScreen() {
                 />
               </View>
               <Text style={styles.lockedProgress}>
-                {formatNumber(state.lifetimePoints)} /{" "}
-                {formatNumber(1_000_000)}
+                {formatNumber(prestigeDelta)} / {formatNumber(1_000_000)}
               </Text>
             </View>
           </View>

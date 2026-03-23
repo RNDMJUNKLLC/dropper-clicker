@@ -96,9 +96,9 @@ function PulseButton({
 }
 
 export default function PrestigeSection() {
-  const { state, prestige, buyPrestigeUpgrade, canPrestige } = useGame();
+  const { state, prestige, buyPrestigeUpgrade, canPrestige, prestigeDelta } = useGame();
 
-  const rawPP = calcPrestigePoints(state.lifetimePoints);
+  const rawPP = calcPrestigePoints(prestigeDelta);
   const ppGainMult =
     Math.pow(2, state.prestigeUpgrades.morePP.buys) *
     (state.rebirthPerks.bonusMult ? 2 : 1);
@@ -169,7 +169,7 @@ export default function PrestigeSection() {
         sublabel={
           canPrestige
             ? `+${formatPP(totalPPGain)} PP`
-            : `Need ${formatNumber(1_000_000)} lifetime pts`
+            : `${formatNumber(prestigeDelta)} / ${formatNumber(1_000_000)} pts since last prestige`
         }
         color={Colors.prestige}
         active={canPrestige}
