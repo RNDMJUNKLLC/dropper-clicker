@@ -23,6 +23,13 @@ export interface PrestigeUpgrade {
   baseCost: number;
 }
 
+export interface CoinUpgrade {
+  id: "coinMagnet" | "luckyDrops" | "coinRush";
+  buys: number;
+  maxBuys: number;
+  baseCost: number;
+}
+
 export interface GameState {
   points: number;
   runPoints: number;
@@ -46,12 +53,21 @@ export interface GameState {
     moreXP: PrestigeUpgrade;
     morePP: PrestigeUpgrade;
   };
+  coins: number;
+  lifetimeCoins: number;
+  coinUpgrades: {
+    coinMagnet: CoinUpgrade;
+    luckyDrops: CoinUpgrade;
+    coinRush: CoinUpgrade;
+  };
 }
 
 type Action =
   | { type: "DROP" }
   | { type: "BUY_DROP_UPGRADE"; id: DropUpgrade["id"] }
   | { type: "BUY_PRESTIGE_UPGRADE"; id: PrestigeUpgrade["id"] }
+  | { type: "COLLECT_COIN"; value: number }
+  | { type: "BUY_COIN_UPGRADE"; id: CoinUpgrade["id"] }
   | { type: "PRESTIGE" }
   | { type: "REBIRTH"; which: 1 | 2 }
   | { type: "LOAD"; state: GameState };
@@ -79,6 +95,12 @@ export function prestigeUpgradeCost(upgrade: PrestigeUpgrade): number {
 
 export function calcPrestigePoints(currentPoints: number): number {
   return Math.pow(currentPoints / 1_000_000, 0.43);
+}
+
+const COIN_COST_SCALE = 1.3;
+
+export function coinUpgradeCost(upgrade: CoinUpgrade): number {
+  return Math.ceil(upgrade.baseCost * Math.pow(COIN_COST_SCALE, upgrade.buys));
 }
 
 function getDropAmount(state: GameState): number {
@@ -117,6 +139,12 @@ const initialPrestigeUpgrades: GameState["prestigeUpgrades"] = {
   morePP: { id: "morePP", buys: 0, maxBuys: 25, baseCost: 10 },
 };
 
+const initialCoinUpgrades: GameState["coinUpgrades"] = {
+  coinMagnet: { id: "coinMagnet", buys: 0, maxBuys: 10, baseCost: 10 },
+  luckyDrops: { id: "luckyDrops", buys: 0, maxBuys: 10, baseCost: 25 },
+  coinRush: { id: "coinRush", buys: 0, maxBuys: 10, baseCost: 50 },
+};
+
 const initialState: GameState = {
   points: 0,
   runPoints: 0,
@@ -132,6 +160,9 @@ const initialState: GameState = {
   },
   dropUpgrades: initialDropUpgrades,
   prestigeUpgrades: initialPrestigeUpgrades,
+  coins: 0,
+  lifetimeCoins: 0,
+  coinUpgrades: initialCoinUpgrades,
 };
 
 function applyDrop(
@@ -212,6 +243,35 @@ function reducer(
       };
     }
 
+    case "COLLECT_COIN": {
+      return {
+        state: {
+          ...state,
+          coins: state.coins + action.value,
+          lifetimeCoins: state.lifetimeCoins + action.value,
+        },
+        leveledUp: false,
+      };
+    }
+
+    case "BUY_COIN_UPGRADE": {
+      const upg = state.coinUpgrades[action.id];
+      if (upg.buys >= upg.maxBuys) return { state, leveledUp: false };
+      const cost = coinUpgradeCost(upg);
+      if (state.coins < cost) return { state, leveledUp: false };
+      return {
+        state: {
+          ...state,
+          coins: state.coins - cost,
+          coinUpgrades: {
+            ...state.coinUpgrades,
+            [action.id]: { ...upg, buys: upg.buys + 1 },
+          },
+        },
+        leveledUp: false,
+      };
+    }
+
     case "PRESTIGE": {
       if (state.points < 1_000_000) return { state, leveledUp: false };
       const rawEarned = calcPrestigePoints(state.points);
@@ -284,6 +344,8 @@ interface GameContextValue {
   drop: () => void;
   buyDropUpgrade: (id: DropUpgrade["id"]) => void;
   buyPrestigeUpgrade: (id: PrestigeUpgrade["id"]) => void;
+  collectCoin: (value: number) => void;
+  buyCoinUpgrade: (id: CoinUpgrade["id"]) => void;
   prestige: () => void;
   rebirth: (which: 1 | 2) => void;
   dropAmount: number;
@@ -296,6 +358,7 @@ interface GameContextValue {
   canRebirth1: boolean;
   canRebirth2: boolean;
   showUpgrades: boolean;
+  coinsUnlocked: boolean;
   leveledUp: boolean;
 }
 
@@ -386,6 +449,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     (which: 1 | 2) => dispatch({ type: "REBIRTH", which }),
     []
   );
+  const collectCoin = useCallback(
+    (value: number) => dispatch({ type: "COLLECT_COIN", value }),
+    []
+  );
+  const buyCoinUpgrade = useCallback(
+    (id: CoinUpgrade["id"]) => dispatch({ type: "BUY_COIN_UPGRADE", id }),
+    []
+  );
 
   const dropAmount = useMemo(() => getDropAmount(state), [state]);
   const xpAmount = useMemo(() => getXPAmount(state), [state]);
@@ -397,6 +468,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const canRebirth1 = state.runPoints >= 1e25;
   const canRebirth2 = state.runPoints >= 1e50 && state.rebirthCount >= 1;
   const showUpgrades = state.totalDrops >= 10;
+  const coinsUnlocked = state.rebirthPerks.autoBuyUpgrades;
 
   const value = useMemo(
     () => ({
@@ -404,6 +476,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       drop,
       buyDropUpgrade,
       buyPrestigeUpgrade,
+      collectCoin,
+      buyCoinUpgrade,
       prestige,
       rebirth,
       dropAmount,
@@ -416,6 +490,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth1,
       canRebirth2,
       showUpgrades,
+      coinsUnlocked,
       leveledUp: combined.leveledUp,
     }),
     [
@@ -423,6 +498,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       drop,
       buyDropUpgrade,
       buyPrestigeUpgrade,
+      collectCoin,
+      buyCoinUpgrade,
       prestige,
       rebirth,
       dropAmount,
@@ -435,6 +512,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth1,
       canRebirth2,
       showUpgrades,
+      coinsUnlocked,
       combined.leveledUp,
     ]
   );

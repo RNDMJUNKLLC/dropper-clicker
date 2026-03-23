@@ -12,6 +12,11 @@ const TEXT_PRIMARY = "#E8F4FF";
 const TEXT_SECONDARY = "#6B8CAE";
 const TEXT_DIM = "#3A5068";
 
+const COIN_BRONZE = "#CD7F32";
+const COIN_SILVER = "#C0C0C0";
+const COIN_GOLD = "#FFB800";
+const COIN_LEGENDARY = "#E040FB";
+
 export const Colors = {
   bg: NAVY,
   bgCard: NAVY_CARD,
@@ -28,6 +33,10 @@ export const Colors = {
   textDim: TEXT_DIM,
   danger: "#FF4444",
   white: "#FFFFFF",
+  coinBronze: COIN_BRONZE,
+  coinSilver: COIN_SILVER,
+  coinGold: COIN_GOLD,
+  coinLegendary: COIN_LEGENDARY,
 };
 
 export default Colors;

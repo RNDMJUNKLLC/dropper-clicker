@@ -2,7 +2,7 @@ import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import Colors from "@/constants/colors";
 
 export default function TabLayout() {
@@ -43,6 +43,15 @@ export default function TabLayout() {
           title: "Game",
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons name="water-outline" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="coins"
+        options={{
+          title: "Coins",
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="circle-multiple" size={24} color={color} />
           ),
         }}
       />
