@@ -77,7 +77,12 @@ export default function CoinSprite({
 
   useEffect(() => {
     scale.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.back(1.5)) });
-    opacity.value = withTiming(1, { duration: 200 });
+
+    const fadeStart = Math.max(0, lifetimeMs - 1000);
+    opacity.value = withSequence(
+      withTiming(1, { duration: 200 }),
+      withDelay(fadeStart - 200, withTiming(0, { duration: 1000 }))
+    );
 
     floatY.value = withDelay(
       300,
@@ -87,12 +92,6 @@ export default function CoinSprite({
         withTiming(-6, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
         withTiming(0, { duration: 1200, easing: Easing.inOut(Easing.sin) })
       )
-    );
-
-    const fadeStart = lifetimeMs - 1000;
-    opacity.value = withDelay(
-      fadeStart,
-      withTiming(0, { duration: 1000 })
     );
 
     const timer = setTimeout(() => {

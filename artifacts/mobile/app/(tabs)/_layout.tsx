@@ -4,10 +4,12 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import Colors from "@/constants/colors";
+import { useGame } from "@/context/GameContext";
 
 export default function TabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const { coinsUnlocked } = useGame();
 
   return (
     <Tabs
@@ -51,8 +53,13 @@ export default function TabLayout() {
         options={{
           title: "Coins",
           tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="circle-multiple" size={24} color={color} />
+            <MaterialCommunityIcons
+              name={coinsUnlocked ? "circle-multiple" : "lock"}
+              size={24}
+              color={coinsUnlocked ? color : Colors.textDim}
+            />
           ),
+          tabBarLabelStyle: coinsUnlocked ? {} : { color: Colors.textDim },
         }}
       />
     </Tabs>
