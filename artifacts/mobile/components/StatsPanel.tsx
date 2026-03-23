@@ -1,0 +1,106 @@
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import Colors from "@/constants/colors";
+import { formatNumber, formatPP, formatTime } from "@/utils/format";
+
+interface StatsPanelProps {
+  points: number;
+  allTimePoints: number;
+  prestigePoints: number;
+  rebirthCount: number;
+  dropAmount: number;
+  dropTimerMs: number;
+}
+
+function Stat({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+}) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statValue} numberOfLines={1}>
+        <Text style={{ color: color ?? Colors.textPrimary }}>{value}</Text>
+      </Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+export default function StatsPanel({
+  points,
+  allTimePoints,
+  prestigePoints,
+  rebirthCount,
+  dropAmount,
+  dropTimerMs,
+}: StatsPanelProps) {
+  return (
+    <View style={styles.container}>
+      <View style={styles.row}>
+        <Stat label="Points" value={formatNumber(points)} color={Colors.accent} />
+        <View style={styles.divider} />
+        <Stat label="All Time" value={formatNumber(allTimePoints)} color={Colors.textPrimary} />
+        <View style={styles.divider} />
+        <Stat label="Per Drop" value={formatNumber(dropAmount)} color={Colors.accent} />
+      </View>
+      <View style={styles.separator} />
+      <View style={styles.row}>
+        <Stat label="PP" value={formatPP(prestigePoints)} color={Colors.prestige} />
+        <View style={styles.divider} />
+        <Stat label="Rebirths" value={String(rebirthCount)} color={Colors.rebirth} />
+        <View style={styles.divider} />
+        <Stat label="Auto Drop" value={formatTime(dropTimerMs)} color={Colors.xp} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: Colors.bgBorder,
+    gap: 0,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  stat: {
+    alignItems: "center",
+    flex: 1,
+    gap: 2,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    fontFamily: "Inter_700Bold",
+  },
+  statLabel: {
+    fontSize: 10,
+    color: Colors.textDim,
+    letterSpacing: 1,
+    fontFamily: "Inter_500Medium",
+    textTransform: "uppercase",
+  },
+  divider: {
+    width: 1,
+    height: 32,
+    backgroundColor: Colors.bgBorder,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: Colors.bgBorder,
+    marginHorizontal: 16,
+  },
+});

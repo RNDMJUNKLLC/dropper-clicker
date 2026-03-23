@@ -11,10 +11,35 @@
       "sourceType": "github",
       "computedHash": "f974fac2783f80ac2a1a2cb45d576b5cca55123015dc73db8adfd02277002461"
     },
+    "character-design-sheet": {
+      "source": "skill-zero/s",
+      "sourceType": "github",
+      "computedHash": "e731a10cb8be0a9a316229433451905b8cdc26f11567f2b74b82433fe3b55d52"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "computedHash": "d31e234f0c90694a670222cdd1dafa853e051d7066beda389f1097c22dadd461"
+    },
+    "game-changing-features": {
+      "source": "softaworks/agent-toolkit",
+      "sourceType": "github",
+      "computedHash": "aa6f4b25f60cbad65bd0826f09e0eded14e588da06172995277511e9a86ee2d7"
+    },
+    "mobile-android-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "0dfa08663016e0faa2db0611420bd5c17ba2d635a057e17a6b71c2a0c3f2ed79"
+    },
+    "mobile-ios-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "3902f919488d8ddc983e157bbcd5f16b739b84eeaab57002bf52b7f9601ed6ad"
+    },
+    "responsive-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "0977c17696ab66ea613ce5b83c856bc7cd01332d98ae237dac7539840fe96187"
     },
     "skill-creator": {
       "source": "anthropics/skills",
