@@ -66,6 +66,10 @@ export function xpForLevel(level: number): number {
   return XP_BASE * Math.pow(XP_SCALE, level - 1);
 }
 
+export function getLevelMultiplier(level: number): number {
+  return Math.pow(level, 0.5);
+}
+
 export function dropUpgradeCost(upgrade: DropUpgrade): number {
   return Math.ceil(upgrade.baseCost * Math.pow(DROP_COST_SCALE, upgrade.buys));
 }
@@ -82,7 +86,8 @@ function getDropAmount(state: GameState): number {
   const baseAmount = 1 + state.dropUpgrades.dropAmount.buys;
   const prestigeMult = Math.pow(2, state.prestigeUpgrades.morePoints.buys);
   const rebirthMult = state.rebirthPerks.bonusMult ? 3 : 1;
-  return baseAmount * prestigeMult * rebirthMult;
+  const levelMult = getLevelMultiplier(state.level);
+  return baseAmount * prestigeMult * rebirthMult * levelMult;
 }
 
 function getXPAmount(state: GameState): number {
@@ -293,6 +298,7 @@ interface GameContextValue {
   dropTimerMs: number;
   xpProgress: number;
   xpRequired: number;
+  levelMultiplier: number;
   canPrestige: boolean;
   canRebirth1: boolean;
   canRebirth2: boolean;
@@ -392,6 +398,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const xpAmount = useMemo(() => getXPAmount(state), [state]);
   const dropTimerMs = useMemo(() => getDropTimerMs(state), [state]);
   const xpRequired = useMemo(() => xpForLevel(state.level), [state.level]);
+  const levelMultiplier = useMemo(() => getLevelMultiplier(state.level), [state.level]);
   const xpProgress = state.xp / xpRequired;
   const canPrestige =
     state.lifetimePoints >= 1_000_000 &&
@@ -413,6 +420,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       dropTimerMs,
       xpProgress,
       xpRequired,
+      levelMultiplier,
       canPrestige,
       canRebirth1,
       canRebirth2,
@@ -431,6 +439,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       dropTimerMs,
       xpProgress,
       xpRequired,
+      levelMultiplier,
       canPrestige,
       canRebirth1,
       canRebirth2,

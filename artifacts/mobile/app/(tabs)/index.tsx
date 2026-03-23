@@ -65,6 +65,7 @@ export default function GameScreen() {
     dropTimerMs,
     xpProgress,
     xpRequired,
+    levelMultiplier,
     showUpgrades,
     canPrestige,
     canRebirth1,
@@ -152,6 +153,7 @@ export default function GameScreen() {
           rebirthCount={state.rebirthCount}
           dropAmount={dropAmount}
           dropTimerMs={dropTimerMs}
+          levelMultiplier={levelMultiplier}
         />
 
         {showUpgrades && (

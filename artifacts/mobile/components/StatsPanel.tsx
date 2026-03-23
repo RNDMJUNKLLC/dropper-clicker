@@ -11,6 +11,7 @@ interface StatsPanelProps {
   rebirthCount: number;
   dropAmount: number;
   dropTimerMs: number;
+  levelMultiplier: number;
 }
 
 function Stat({
@@ -40,6 +41,7 @@ export default function StatsPanel({
   rebirthCount,
   dropAmount,
   dropTimerMs,
+  levelMultiplier,
 }: StatsPanelProps) {
   return (
     <View style={styles.container}>
@@ -61,6 +63,8 @@ export default function StatsPanel({
       <View style={styles.separator} />
       <View style={styles.row}>
         <Stat label="Auto Drop" value={formatTime(dropTimerMs)} color={Colors.accentDim} />
+        <View style={styles.divider} />
+        <Stat label="Lvl Mult" value={`x${levelMultiplier.toFixed(2)}`} color={Colors.xp} />
       </View>
     </View>
   );
