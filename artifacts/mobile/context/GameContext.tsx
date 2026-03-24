@@ -425,7 +425,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const autoBuyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoBuyPrestigeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoDropTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const localLoadedRef = useRef(false);
+  const [localLoaded, setLocalLoaded] = useState(false);
   const cloudSyncedRef = useRef(false);
   const pendingCloudSaveRef = useRef(false);
   const lastCloudSaveRef = useRef<number>(0);
@@ -438,7 +438,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: "LOAD", state: loaded });
         } catch {}
       }
-      localLoadedRef.current = true;
+      setLocalLoaded(true);
     });
   }, []);
 
@@ -476,7 +476,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated || !localLoadedRef.current) return;
+    if (!isAuthenticated || !localLoaded) return;
     if (cloudSyncedRef.current) return;
     cloudSyncedRef.current = true;
 
@@ -515,7 +515,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setCloudSyncStatus("idle");
       }
     })();
-  }, [isAuthenticated, doCloudSave]);
+  }, [isAuthenticated, localLoaded, doCloudSave]);
 
   useEffect(() => {
     if (!isAuthenticated) {
