@@ -1,22 +1,17 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { Image, StyleSheet, Text, View } from "react-native";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth";
 
 export default function UserIndicator() {
   const { user, isAuthenticated } = useAuth();
-  const router = useRouter();
 
   if (!isAuthenticated || !user) return null;
 
   const initials = (user.firstName?.[0] || user.email?.[0] || "?").toUpperCase();
 
   return (
-    <Pressable
-      style={styles.container}
-      onPress={() => router.push("/settings" as any)}
-    >
+    <View style={styles.container}>
       {user.profileImageUrl ? (
         <Image source={{ uri: user.profileImageUrl }} style={styles.avatar} />
       ) : (
@@ -27,7 +22,7 @@ export default function UserIndicator() {
       <Text style={styles.name} numberOfLines={1}>
         {user.firstName || user.email?.split("@")[0] || "Player"}
       </Text>
-    </Pressable>
+    </View>
   );
 }
 

@@ -58,6 +58,7 @@ function getSafeReturnTo(value: unknown): string {
 }
 
 async function upsertUser(claims: Record<string, unknown>) {
+  const avatarUrl = (claims.profile_image_url || claims.picture) as string | null;
   const userData = {
     id: claims.sub as string,
     replitId: (claims.sub as string) || null,
@@ -65,9 +66,8 @@ async function upsertUser(claims: Record<string, unknown>) {
     email: (claims.email as string) || null,
     firstName: (claims.first_name as string) || null,
     lastName: (claims.last_name as string) || null,
-    profileImageUrl: (claims.profile_image_url || claims.picture) as
-      | string
-      | null,
+    avatarUrl,
+    profileImageUrl: avatarUrl,
   };
 
   const [user] = await db
