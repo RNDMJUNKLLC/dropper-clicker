@@ -8,6 +8,7 @@ import React, {
   useReducer,
   useRef,
 } from "react";
+import { AppState, AppStateStatus } from "react-native";
 
 export interface DropUpgrade {
   id: "dropAmount" | "dropXP" | "dropTimer";
@@ -433,10 +434,33 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     saveTimerRef.current = setTimeout(() => {
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }, 2000);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, [state]);
 
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  useEffect(() => {
+    const flushSave = () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef.current));
+    };
+
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === "background" || nextState === "inactive") {
+        flushSave();
+      }
+    };
+
+    const sub = AppState.addEventListener("change", handleAppState);
+
+    return () => {
+      sub.remove();
+      flushSave();
+    };
+  }, []);
 
   useEffect(() => {
     if (autoDropTimerRef.current) clearInterval(autoDropTimerRef.current);
