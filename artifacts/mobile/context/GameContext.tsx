@@ -147,7 +147,7 @@ const initialDropUpgrades: GameState["dropUpgrades"] = {
 const initialPrestigeUpgrades: GameState["prestigeUpgrades"] = {
   morePoints: { id: "morePoints", buys: 0, maxBuys: 100, baseCost: 1 },
   moreXP: { id: "moreXP", buys: 0, maxBuys: 100, baseCost: 2 },
-  morePP: { id: "morePP", buys: 0, maxBuys: 25, baseCost: 10 },
+  morePP: { id: "morePP", buys: 0, maxBuys: 15, baseCost: 10 },
 };
 
 const initialCoinUpgrades: GameState["coinUpgrades"] = {
@@ -352,12 +352,27 @@ function reducer(
 
     case "LOAD": {
       const loadedPerks = action.state.rebirthPerks ?? {};
+      const loadedPrestige = action.state.prestigeUpgrades ?? {};
+      const clampedPrestigeUpgrades = {
+        ...initialPrestigeUpgrades,
+        ...loadedPrestige,
+        morePP: {
+          ...initialPrestigeUpgrades.morePP,
+          ...(loadedPrestige.morePP ?? {}),
+          buys: Math.min(
+            loadedPrestige.morePP?.buys ?? 0,
+            initialPrestigeUpgrades.morePP.maxBuys
+          ),
+          maxBuys: initialPrestigeUpgrades.morePP.maxBuys,
+        },
+      };
       return {
         state: {
           ...initialState,
           ...action.state,
           lifetimePoints: action.state.lifetimePoints ?? action.state.runPoints ?? 0,
           runPoints: action.state.runPoints ?? 0,
+          prestigeUpgrades: clampedPrestigeUpgrades,
           rebirthPerks: {
             ...initialState.rebirthPerks,
             ...loadedPerks,

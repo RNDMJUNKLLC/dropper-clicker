@@ -389,6 +389,7 @@ const styles = StyleSheet.create({
   },
   upgradesGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   perkChip: {

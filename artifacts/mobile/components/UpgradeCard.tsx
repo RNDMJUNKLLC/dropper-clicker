@@ -89,8 +89,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.bgBorder,
     gap: 8,
-    flex: 1,
-    minWidth: 140,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: "30%",
+    minWidth: 100,
   },
   maxedCard: {
     opacity: 0.5,

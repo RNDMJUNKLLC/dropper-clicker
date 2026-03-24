@@ -129,19 +129,19 @@ export default function PrestigeSection() {
     {
       id: "morePoints" as const,
       title: "More Drops",
-      description: "x2 points per drop",
+      description: `2x points per drop\nCurrent: x${Math.pow(2, state.prestigeUpgrades.morePoints.buys)}`,
       color: Colors.accent,
     },
     {
       id: "moreXP" as const,
       title: "More XP",
-      description: "x2 XP per drop",
+      description: `2x XP per drop\nCurrent: x${Math.pow(2, state.prestigeUpgrades.moreXP.buys)}`,
       color: Colors.xp,
     },
     {
       id: "morePP" as const,
       title: "More PP",
-      description: "x2 PP gain on prestige",
+      description: `2x PP gain on prestige\nCurrent: x${Math.pow(2, state.prestigeUpgrades.morePP.buys)}`,
       color: Colors.prestige,
     },
   ];
@@ -277,6 +277,7 @@ const styles = StyleSheet.create({
   },
   upgradesGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
 });
