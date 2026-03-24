@@ -62,6 +62,15 @@ export default function TabLayout() {
           tabBarLabelStyle: coinsUnlocked ? {} : { color: Colors.textDim },
         }}
       />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="cog-outline" size={24} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
