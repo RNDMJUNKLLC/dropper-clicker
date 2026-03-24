@@ -10,9 +10,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import Colors from "@/constants/colors";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LoginScreen from "@/components/LoginScreen";
 import SplashView from "@/components/SplashView";
@@ -35,7 +37,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useAuth();
   const [skipped, setSkipped] = useState(false);
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={Colors.accent} />
+      </View>
+    );
+  }
 
   if (!isAuthenticated && !skipped) {
     return <LoginScreen onSkip={() => setSkipped(true)} />;
