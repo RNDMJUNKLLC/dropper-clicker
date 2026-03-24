@@ -93,6 +93,26 @@ router.get("/auth/user", (req: Request, res: Response) => {
   );
 });
 
+router.get("/auth/me", (req: Request, res: Response) => {
+  res.json(
+    GetCurrentAuthUserResponse.parse({
+      user: req.isAuthenticated() ? req.user : null,
+    }),
+  );
+});
+
+router.post("/auth/replit", async (req: Request, res: Response) => {
+  res.redirect(307, "/api/mobile-auth/token-exchange");
+});
+
+router.post("/auth/logout", async (req: Request, res: Response) => {
+  const sid = getSessionId(req);
+  if (sid) {
+    await deleteSession(sid);
+  }
+  res.json(LogoutMobileSessionResponse.parse({ success: true }));
+});
+
 router.get("/login", async (req: Request, res: Response) => {
   const config = await getOidcConfig();
   const callbackUrl = `${getOrigin(req)}/api/callback`;
