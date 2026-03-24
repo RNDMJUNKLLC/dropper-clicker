@@ -98,3 +98,97 @@ export const LogoutMobileSessionHeader = zod.object({
 export const LogoutMobileSessionResponse = zod.object({
   success: zod.boolean(),
 });
+
+/**
+ * @summary Get the currently authenticated user (alias for /auth/user)
+ */
+export const GetCurrentAuthMeHeader = zod.object({
+  Authorization: zod
+    .string()
+    .optional()
+    .describe("Opaque session token — `Bearer <sid>`."),
+});
+
+export const GetCurrentAuthMeResponse = zod.object({
+  user: zod.union([
+    zod.object({
+      id: zod.string(),
+      email: zod.string().email().nullable(),
+      firstName: zod.string().nullable(),
+      lastName: zod.string().nullable(),
+      profileImageUrl: zod.string().nullable(),
+    }),
+    zod.null(),
+  ]),
+});
+
+/**
+ * @summary Exchange a Replit OIDC code for a session token (alias for /mobile-auth/token-exchange)
+ */
+
+export const ExchangeReplitAuthorizationCodeBody = zod.object({
+  code: zod.string().min(1),
+  code_verifier: zod.string().min(1),
+  redirect_uri: zod.string().url().min(1),
+  state: zod.string().min(1),
+  nonce: zod.string().min(1).optional(),
+});
+
+export const ExchangeReplitAuthorizationCodeResponse = zod.object({
+  token: zod.string(),
+});
+
+/**
+ * @summary Delete the current session and clear cookie (alias for /mobile-auth/logout)
+ */
+export const LogoutAuthSessionHeader = zod.object({
+  Authorization: zod
+    .string()
+    .optional()
+    .describe("Opaque session token — `Bearer <sid>`."),
+});
+
+export const LogoutAuthSessionResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Get the latest cloud save for the authenticated user
+ */
+export const GetCloudSaveHeader = zod.object({
+  Authorization: zod
+    .string()
+    .optional()
+    .describe("Opaque session token — `Bearer <sid>`."),
+});
+
+export const GetCloudSaveResponse = zod.object({
+  save: zod.union([
+    zod.object({
+      gameState: zod.record(zod.string(), zod.unknown()),
+      version: zod.number(),
+      savedAt: zod.date(),
+    }),
+    zod.null(),
+  ]),
+});
+
+/**
+ * @summary Create or update the cloud save for the authenticated user
+ */
+export const UpsertCloudSaveHeader = zod.object({
+  Authorization: zod
+    .string()
+    .optional()
+    .describe("Opaque session token — `Bearer <sid>`."),
+});
+
+export const UpsertCloudSaveBody = zod.object({
+  gameState: zod.record(zod.string(), zod.unknown()),
+});
+
+export const UpsertCloudSaveResponse = zod.object({
+  success: zod.boolean(),
+  version: zod.number(),
+  savedAt: zod.date(),
+});

@@ -206,6 +206,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogoutSuccess'
+  /saves:
+    get:
+      tags: [Saves]
+      operationId: getCloudSave
+      summary: Get the latest cloud save for the authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+      responses:
+        '200':
+          description: Cloud save data (or null if none exists).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudSaveEnvelope'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    put:
+      tags: [Saves]
+      operationId: upsertCloudSave
+      summary: Create or update the cloud save for the authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertCloudSaveRequest'
+      responses:
+        '200':
+          description: Save upserted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertCloudSaveResponse'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   parameters:
     AuthorizationSessionHeader:
@@ -292,3 +337,42 @@ components:
       properties:
         error:
           type: string
+    CloudSave:
+      type: object
+      required: [gameState, version, savedAt]
+      properties:
+        gameState:
+          type: object
+          additionalProperties: true
+        version:
+          type: integer
+        savedAt:
+          type: string
+          format: date-time
+    CloudSaveEnvelope:
+      type: object
+      required: [save]
+      properties:
+        save:
+          oneOf:
+            - $ref: '#/components/schemas/CloudSave'
+            - type: 'null'
+    UpsertCloudSaveRequest:
+      type: object
+      required: [gameState]
+      properties:
+        gameState:
+          type: object
+          additionalProperties: true
+    UpsertCloudSaveResponse:
+      type: object
+      required: [success, version, savedAt]
+      properties:
+        success:
+          type: boolean
+          const: true
+        version:
+          type: integer
+        savedAt:
+          type: string
+          format: date-time

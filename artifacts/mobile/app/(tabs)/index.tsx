@@ -20,6 +20,7 @@ import PrestigeSection from "@/components/PrestigeSection";
 import RebirthSection from "@/components/RebirthSection";
 import StatsPanel from "@/components/StatsPanel";
 import UpgradeCard from "@/components/UpgradeCard";
+import CloudSyncIndicator from "@/components/CloudSyncIndicator";
 import UserIndicator from "@/components/UserIndicator";
 import XPBar from "@/components/XPBar";
 import { dropUpgradeCost, useGame } from "@/context/GameContext";
@@ -126,7 +127,10 @@ export default function GameScreen() {
             <Text style={styles.gameName}>DROPPER</Text>
             <Text style={styles.gameTagline}>incremental</Text>
           </View>
-          <UserIndicator />
+          <View style={styles.headerRight}>
+            <CloudSyncIndicator />
+            <UserIndicator />
+          </View>
         </View>
 
         <View style={styles.pointsHero}>
@@ -313,6 +317,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 4,
     flex: 1,
+  },
+  headerRight: {
+    alignItems: "flex-end",
+    gap: 4,
   },
   gameName: {
     fontSize: 28,

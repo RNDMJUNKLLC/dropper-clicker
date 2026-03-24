@@ -7,8 +7,11 @@ import React, {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from "react";
 import { AppState, AppStateStatus } from "react-native";
+import { useAuth } from "@/lib/auth";
+import { fetchCloudSave, pushCloudSave, type CloudSyncStatus } from "@/lib/cloudSync";
 
 export interface DropUpgrade {
   id: "dropAmount" | "dropXP" | "dropTimer";
@@ -401,10 +404,12 @@ interface GameContextValue {
   coinsUnlocked: boolean;
   pointTreeUnlocked: boolean;
   leveledUp: boolean;
+  cloudSyncStatus: CloudSyncStatus;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
 const STORAGE_KEY = "dropper_game_v3";
+const CLOUD_SYNC_INTERVAL = 10_000;
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [combined, dispatch] = useReducer(wrappedReducer, {
@@ -413,10 +418,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   });
 
   const { state } = combined;
+  const { isAuthenticated, user } = useAuth();
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>("idle");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cloudSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoBuyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoBuyPrestigeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoDropTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const localLoadedRef = useRef(false);
+  const cloudSyncedRef = useRef(false);
+  const pendingCloudSaveRef = useRef(false);
+  const lastCloudSaveRef = useRef<number>(0);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
@@ -426,6 +438,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: "LOAD", state: loaded });
         } catch {}
       }
+      localLoadedRef.current = true;
     });
   }, []);
 
@@ -442,6 +455,88 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  const doCloudSave = useCallback(async () => {
+    if (!isAuthenticated) return;
+    const currentState = stateRef.current;
+    if (currentState.lifetimePoints === 0 && currentState.totalDrops === 0) return;
+
+    setCloudSyncStatus("syncing");
+    const result = await pushCloudSave(currentState);
+    if (result) {
+      setCloudSyncStatus("saved");
+      lastCloudSaveRef.current = Date.now();
+      pendingCloudSaveRef.current = false;
+      setTimeout(() => {
+        setCloudSyncStatus((prev) => (prev === "saved" ? "idle" : prev));
+      }, 3000);
+    } else {
+      setCloudSyncStatus("error");
+      pendingCloudSaveRef.current = true;
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !localLoadedRef.current) return;
+    if (cloudSyncedRef.current) return;
+    cloudSyncedRef.current = true;
+
+    (async () => {
+      setCloudSyncStatus("syncing");
+      const cloudSave = await fetchCloudSave();
+
+      if (!cloudSave) {
+        setCloudSyncStatus("idle");
+        if (stateRef.current.lifetimePoints > 0 || stateRef.current.totalDrops > 0) {
+          doCloudSave();
+        }
+        return;
+      }
+
+      const localLP = stateRef.current.lifetimePoints ?? 0;
+      const cloudLP = (cloudSave.gameState.lifetimePoints as number) ?? 0;
+
+      if (cloudLP > localLP) {
+        dispatch({ type: "LOAD", state: cloudSave.gameState });
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(cloudSave.gameState));
+        setCloudSyncStatus("saved");
+        setTimeout(() => {
+          setCloudSyncStatus((prev) => (prev === "saved" ? "idle" : prev));
+        }, 3000);
+      } else if (localLP > cloudLP) {
+        doCloudSave();
+      } else {
+        setCloudSyncStatus("idle");
+      }
+    })();
+  }, [isAuthenticated, doCloudSave]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      cloudSyncedRef.current = false;
+      return;
+    }
+
+    cloudSaveTimerRef.current = setInterval(() => {
+      if (pendingCloudSaveRef.current || Date.now() - lastCloudSaveRef.current >= CLOUD_SYNC_INTERVAL) {
+        doCloudSave();
+      }
+    }, CLOUD_SYNC_INTERVAL);
+
+    return () => {
+      if (cloudSaveTimerRef.current) clearInterval(cloudSaveTimerRef.current);
+    };
+  }, [isAuthenticated, doCloudSave]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const markDirty = () => {
+      pendingCloudSaveRef.current = true;
+    };
+
+    markDirty();
+  }, [state, isAuthenticated]);
+
   useEffect(() => {
     const flushSave = () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -451,6 +546,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const handleAppState = (nextState: AppStateStatus) => {
       if (nextState === "background" || nextState === "inactive") {
         flushSave();
+        if (isAuthenticated) {
+          doCloudSave();
+        }
       }
     };
 
@@ -460,7 +558,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       sub.remove();
       flushSave();
     };
-  }, []);
+  }, [isAuthenticated, doCloudSave]);
 
   useEffect(() => {
     if (autoDropTimerRef.current) clearInterval(autoDropTimerRef.current);
@@ -591,6 +689,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       coinsUnlocked,
       pointTreeUnlocked,
       leveledUp: combined.leveledUp,
+      cloudSyncStatus,
     }),
     [
       state,
@@ -617,6 +716,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       coinsUnlocked,
       pointTreeUnlocked,
       combined.leveledUp,
+      cloudSyncStatus,
     ]
   );
 

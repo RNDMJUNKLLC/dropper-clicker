@@ -19,12 +19,15 @@ import type {
 import type {
   AuthUserEnvelope,
   BeginBrowserLoginParams,
+  CloudSaveEnvelope,
   ErrorEnvelope,
   HandleBrowserLoginCallbackParams,
   HealthStatus,
   LogoutSuccess,
   MobileTokenExchangeRequest,
   MobileTokenExchangeSuccess,
+  UpsertCloudSaveRequest,
+  UpsertCloudSaveResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -634,4 +637,414 @@ export const useLogoutMobileSession = <
   TContext
 > => {
   return useMutation(getLogoutMobileSessionMutationOptions(options));
+};
+
+/**
+ * @summary Get the currently authenticated user (alias for /auth/user)
+ */
+export const getGetCurrentAuthMeUrl = () => {
+  return `/api/auth/me`;
+};
+
+export const getCurrentAuthMe = async (
+  options?: RequestInit,
+): Promise<AuthUserEnvelope> => {
+  return customFetch<AuthUserEnvelope>(getGetCurrentAuthMeUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCurrentAuthMeQueryKey = () => {
+  return [`/api/auth/me`] as const;
+};
+
+export const getGetCurrentAuthMeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCurrentAuthMe>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentAuthMe>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCurrentAuthMeQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCurrentAuthMe>>
+  > = ({ signal }) => getCurrentAuthMe({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentAuthMe>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCurrentAuthMeQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCurrentAuthMe>>
+>;
+export type GetCurrentAuthMeQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the currently authenticated user (alias for /auth/user)
+ */
+
+export function useGetCurrentAuthMe<
+  TData = Awaited<ReturnType<typeof getCurrentAuthMe>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentAuthMe>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCurrentAuthMeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Exchange a Replit OIDC code for a session token (alias for /mobile-auth/token-exchange)
+ */
+export const getExchangeReplitAuthorizationCodeUrl = () => {
+  return `/api/auth/replit`;
+};
+
+export const exchangeReplitAuthorizationCode = async (
+  mobileTokenExchangeRequest: MobileTokenExchangeRequest,
+  options?: RequestInit,
+): Promise<MobileTokenExchangeSuccess> => {
+  return customFetch<MobileTokenExchangeSuccess>(
+    getExchangeReplitAuthorizationCodeUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(mobileTokenExchangeRequest),
+    },
+  );
+};
+
+export const getExchangeReplitAuthorizationCodeMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof exchangeReplitAuthorizationCode>>,
+    TError,
+    { data: BodyType<MobileTokenExchangeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof exchangeReplitAuthorizationCode>>,
+  TError,
+  { data: BodyType<MobileTokenExchangeRequest> },
+  TContext
+> => {
+  const mutationKey = ["exchangeReplitAuthorizationCode"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof exchangeReplitAuthorizationCode>>,
+    { data: BodyType<MobileTokenExchangeRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return exchangeReplitAuthorizationCode(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ExchangeReplitAuthorizationCodeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof exchangeReplitAuthorizationCode>>
+>;
+export type ExchangeReplitAuthorizationCodeMutationBody =
+  BodyType<MobileTokenExchangeRequest>;
+export type ExchangeReplitAuthorizationCodeMutationError =
+  ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Exchange a Replit OIDC code for a session token (alias for /mobile-auth/token-exchange)
+ */
+export const useExchangeReplitAuthorizationCode = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof exchangeReplitAuthorizationCode>>,
+    TError,
+    { data: BodyType<MobileTokenExchangeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof exchangeReplitAuthorizationCode>>,
+  TError,
+  { data: BodyType<MobileTokenExchangeRequest> },
+  TContext
+> => {
+  return useMutation(
+    getExchangeReplitAuthorizationCodeMutationOptions(options),
+  );
+};
+
+/**
+ * @summary Delete the current session and clear cookie (alias for /mobile-auth/logout)
+ */
+export const getLogoutAuthSessionUrl = () => {
+  return `/api/auth/logout`;
+};
+
+export const logoutAuthSession = async (
+  options?: RequestInit,
+): Promise<LogoutSuccess> => {
+  return customFetch<LogoutSuccess>(getLogoutAuthSessionUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getLogoutAuthSessionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof logoutAuthSession>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof logoutAuthSession>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["logoutAuthSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof logoutAuthSession>>,
+    void
+  > = () => {
+    return logoutAuthSession(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LogoutAuthSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof logoutAuthSession>>
+>;
+
+export type LogoutAuthSessionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete the current session and clear cookie (alias for /mobile-auth/logout)
+ */
+export const useLogoutAuthSession = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof logoutAuthSession>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof logoutAuthSession>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getLogoutAuthSessionMutationOptions(options));
+};
+
+/**
+ * @summary Get the latest cloud save for the authenticated user
+ */
+export const getGetCloudSaveUrl = () => {
+  return `/api/saves`;
+};
+
+export const getCloudSave = async (
+  options?: RequestInit,
+): Promise<CloudSaveEnvelope> => {
+  return customFetch<CloudSaveEnvelope>(getGetCloudSaveUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCloudSaveQueryKey = () => {
+  return [`/api/saves`] as const;
+};
+
+export const getGetCloudSaveQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCloudSave>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCloudSave>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCloudSaveQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCloudSave>>> = ({
+    signal,
+  }) => getCloudSave({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCloudSave>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCloudSaveQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCloudSave>>
+>;
+export type GetCloudSaveQueryError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Get the latest cloud save for the authenticated user
+ */
+
+export function useGetCloudSave<
+  TData = Awaited<ReturnType<typeof getCloudSave>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCloudSave>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCloudSaveQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create or update the cloud save for the authenticated user
+ */
+export const getUpsertCloudSaveUrl = () => {
+  return `/api/saves`;
+};
+
+export const upsertCloudSave = async (
+  upsertCloudSaveRequest: UpsertCloudSaveRequest,
+  options?: RequestInit,
+): Promise<UpsertCloudSaveResponse> => {
+  return customFetch<UpsertCloudSaveResponse>(getUpsertCloudSaveUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(upsertCloudSaveRequest),
+  });
+};
+
+export const getUpsertCloudSaveMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertCloudSave>>,
+    TError,
+    { data: BodyType<UpsertCloudSaveRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof upsertCloudSave>>,
+  TError,
+  { data: BodyType<UpsertCloudSaveRequest> },
+  TContext
+> => {
+  const mutationKey = ["upsertCloudSave"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof upsertCloudSave>>,
+    { data: BodyType<UpsertCloudSaveRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return upsertCloudSave(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpsertCloudSaveMutationResult = NonNullable<
+  Awaited<ReturnType<typeof upsertCloudSave>>
+>;
+export type UpsertCloudSaveMutationBody = BodyType<UpsertCloudSaveRequest>;
+export type UpsertCloudSaveMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Create or update the cloud save for the authenticated user
+ */
+export const useUpsertCloudSave = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertCloudSave>>,
+    TError,
+    { data: BodyType<UpsertCloudSaveRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof upsertCloudSave>>,
+  TError,
+  { data: BodyType<UpsertCloudSaveRequest> },
+  TContext
+> => {
+  return useMutation(getUpsertCloudSaveMutationOptions(options));
 };

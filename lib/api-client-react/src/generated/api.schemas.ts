@@ -51,6 +51,30 @@ export interface ErrorEnvelope {
   error: string;
 }
 
+export type CloudSaveGameState = { [key: string]: unknown };
+
+export interface CloudSave {
+  gameState: CloudSaveGameState;
+  version: number;
+  savedAt: string;
+}
+
+export interface CloudSaveEnvelope {
+  save: CloudSave | null;
+}
+
+export type UpsertCloudSaveRequestGameState = { [key: string]: unknown };
+
+export interface UpsertCloudSaveRequest {
+  gameState: UpsertCloudSaveRequestGameState;
+}
+
+export interface UpsertCloudSaveResponse {
+  success: true;
+  version: number;
+  savedAt: string;
+}
+
 /**
  * Opaque session token — `Bearer <sid>`.
  */
