@@ -60,6 +60,8 @@ function getSafeReturnTo(value: unknown): string {
 async function upsertUser(claims: Record<string, unknown>) {
   const userData = {
     id: claims.sub as string,
+    replitId: (claims.sub as string) || null,
+    username: (claims.username as string) || (claims.name as string) || null,
     email: (claims.email as string) || null,
     firstName: (claims.first_name as string) || null,
     lastName: (claims.last_name as string) || null,
@@ -76,6 +78,7 @@ async function upsertUser(claims: Record<string, unknown>) {
       set: {
         ...userData,
         updatedAt: new Date(),
+        lastLoginAt: new Date(),
       },
     })
     .returning();

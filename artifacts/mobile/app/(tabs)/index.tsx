@@ -20,6 +20,7 @@ import PrestigeSection from "@/components/PrestigeSection";
 import RebirthSection from "@/components/RebirthSection";
 import StatsPanel from "@/components/StatsPanel";
 import UpgradeCard from "@/components/UpgradeCard";
+import UserIndicator from "@/components/UserIndicator";
 import XPBar from "@/components/XPBar";
 import { dropUpgradeCost, useGame } from "@/context/GameContext";
 import { formatNumber, formatTime } from "@/utils/format";
@@ -120,9 +121,12 @@ export default function GameScreen() {
         contentContainerStyle={[styles.scroll, { paddingBottom: botPad + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.gameName}>DROPPER</Text>
-          <Text style={styles.gameTagline}>incremental</Text>
+        <View style={styles.headerRow}>
+          <View style={styles.header}>
+            <Text style={styles.gameName}>DROPPER</Text>
+            <Text style={styles.gameTagline}>incremental</Text>
+          </View>
+          <UserIndicator />
         </View>
 
         <View style={styles.pointsHero}>
@@ -300,9 +304,15 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 20,
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
   header: {
     alignItems: "center",
     paddingTop: 4,
+    flex: 1,
   },
   gameName: {
     fontSize: 28,

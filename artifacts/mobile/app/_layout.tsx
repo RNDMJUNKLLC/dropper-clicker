@@ -14,9 +14,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import LoginScreen from "@/components/LoginScreen";
 import SplashView from "@/components/SplashView";
 import { GameProvider } from "@/context/GameContext";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,6 +29,19 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );
+}
+
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { isLoading, isAuthenticated } = useAuth();
+  const [skipped, setSkipped] = useState(false);
+
+  if (isLoading) return null;
+
+  if (!isAuthenticated && !skipped) {
+    return <LoginScreen onSkip={() => setSkipped(true)} />;
+  }
+
+  return <>{children}</>;
 }
 
 export default function RootLayout() {
@@ -60,11 +74,13 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <GameProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <RootLayoutNav />
-              </GestureHandlerRootView>
-            </GameProvider>
+            <AuthGate>
+              <GameProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
+              </GameProvider>
+            </AuthGate>
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
