@@ -3,23 +3,25 @@ import type { GameState } from "@/context/GameContext";
 
 export type CloudSyncStatus = "idle" | "syncing" | "saved" | "error" | "offline";
 
-export async function fetchCloudSave(): Promise<{
-  gameState: GameState;
-  version: number;
-  savedAt: string;
-} | null> {
+export type FetchResult =
+  | { status: "found"; gameState: GameState; version: number; savedAt: string }
+  | { status: "empty" }
+  | { status: "error" };
+
+export async function fetchCloudSave(): Promise<FetchResult> {
   try {
     const response = await getCloudSave();
     if (response.save) {
       return {
+        status: "found",
         gameState: response.save.gameState as unknown as GameState,
         version: response.save.version,
         savedAt: response.save.savedAt as unknown as string,
       };
     }
-    return null;
+    return { status: "empty" };
   } catch {
-    return null;
+    return { status: "error" };
   }
 }
 
