@@ -1,0 +1,58 @@
+Game optimizations and changes. 
+
+Point upgrades. 
+- [ ] Drop power. No change. 
+- [ ] Xp Surge. +1per buy. 
+- [ ] Rapid drop. Max buys 4. -.
+
+Level up. 
+- [ ] Gain 1.2x points. 
+- [ ] Gain .5x xp. 
+
+Prestige upgrades. 
+- [ ] All upgrades. Max buys 10. 
+
+Game mechanics. 
+- [ ] No auto dropping. Manual clicks with cooldown instead. Rapid drop decreases cooldown between clicks. 
+- [ ] Prestige unlocks at 1000 points. Math for gain is now 1 per 1000 points. 
+- [ ] Level 7 unlocks upgrade tree 
+- [ ] Level 8 instead unlocks coins tab. 
+- [ ] Coin spawn. 2 seconds per spawn. Capacity of 10 on screen. Remove live span. Remove combo. 
+
+
+Upgrade tree path. 
+
+	more Points. X3 points. Costs 2.5e6	
+	More XP. 2x XP. Cost 1.5e9	
+	More coins. X3 coins. Cost 1e10	
+	More Points. X5 points. Cost 2.5e9 Prestige Points	
+Faster spawn. Doubles spawn rate for coins. Costs 2.5e11 points	More spawn cap. +10 coin capacity. Cost 1.5e11 points. 	More spawn Bulk. +1 coin spawn. Cost 1e11 points. (Coins spawn more simultaneously)
+More coins. X3 coins. Cost 1e12 prestige points. 		More points. Boost points based on rebirth points. Cost 5e11 points. (Boost is +10% points increase per 1e9 prestige points. )
+More reading points. X3 reading points. Cost 20k coins. 	Unlock reading. Unlocks reading, 2x coins. Cost 10k coins. 	More coins. X3 coins. Cost 100 reading points. 
+	More points. X3 points. Cost 1.5k reading points. 	
+	*These upgrades are unlocked after tier 2 is reached.*	
+Cheaper books. 50% less books price *scaling*. Costs 150k coins. 	More XP. X3 xp. Costs 75k reading points. 	*unlocks at level 14.* More XP. Boost xp based on coins. Cost 3e22 points. (Boost is +10% xp increase per 1e9 coins.) 
+Coin upgrades. 
+- [ ] More cash. 2x points. Max buys 10. Costs 5 coins. Increases by 5x per buy. 
+- [ ] More Xp. 2x xp. Max buys 10. Costs 5 coins. Increases by 5x per buy. 
+- [ ] Faster spawn. -0.2s per coin spawn. Max buys 4. Costs 15 coins. Increase by x3 per buy. 
+
+Reading. 
+- [ ] Buy books. Gain reading points based on books. Buy upgrades. Upgrades gain power based on reading points invested into each category
+- [ ] Book costs 10k coins to start. +1 rp per sec per book. Increases by 10% per buy. 
+Reading upgrades. 
+- [ ] More points. 0.05x increase per point
+- [ ] More xp. 0.18x increase per point. 
+- [ ] More reading points. 0.1x increase per point. 
+
+Rebirth is shown at level 10. 
+Rebirth perks. 
+Tier 1. 2x all stats PER rebirth. Autoclick dropper every 0.5s. X3 coins. Unlock cost is 1e15 points. 
+
+Tier 2. Adds new upgrade tree upgrades. X3 reading points. +25 points upgrades cap to points and xp, (rapid drop left untouched). Prestiging does not reset bought upgrades, only removes points. Cost unlock is 2.5e16 points. 
+
+Tier 3. Adds auto buy to point and prestige upgrades without spending currency. Automatically gain 10% of prestige points per second. Cost 5e17 points. 
+
+Tier 4. Automatically split reading points into reading upgrades per second. Automatically buy books when available without spending coins. Unlocks daily challenges. Cost 2.5e19
+
+Tier 5. Unlock a new feature. (Gems and diamonds tier will be worked on later.) automatically buy coins upgrades without spending coins. 1e21
