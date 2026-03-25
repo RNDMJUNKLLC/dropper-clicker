@@ -3,7 +3,6 @@ import React, { useEffect } from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity } from "react-native";
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -57,6 +56,7 @@ interface CoinSpriteProps {
   lifetimeMs: number;
   onCollect: (coin: SpawnedCoin) => void;
   onExpire: (id: string) => void;
+  autoCollected?: boolean;
 }
 
 export default function CoinSprite({
@@ -64,6 +64,7 @@ export default function CoinSprite({
   lifetimeMs,
   onCollect,
   onExpire,
+  autoCollected,
 }: CoinSpriteProps) {
   const config = RARITY_CONFIG[coin.rarity];
   const scale = useSharedValue(0);
@@ -105,7 +106,7 @@ export default function CoinSprite({
     if (collected.value) return;
     collected.value = true;
 
-    collectScale.value = withTiming(1.5, { duration: 150 });
+    collectScale.value = withTiming(autoCollected ? 0.5 : 1.5, { duration: 150 });
     collectOpacity.value = withDelay(100, withTiming(0, { duration: 200 }));
     plusOpacity.value = withSequence(
       withTiming(1, { duration: 100 }),
@@ -141,8 +142,8 @@ export default function CoinSprite({
       ]}
     >
       <Animated.View style={plusStyle}>
-        <Text style={[styles.plusText, { color: config.color }]}>
-          +{coin.value}
+        <Text style={[styles.plusText, { color: autoCollected ? Colors.coinLegendary : config.color }]}>
+          {autoCollected ? "⚡" : ""}+{coin.value}
         </Text>
       </Animated.View>
 

@@ -213,6 +213,7 @@ export default function CoinsScreen() {
   const coinIdRef = useRef(0);
   const spawnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoCollectTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [autoCollectedIds, setAutoCollectedIds] = useState<Set<string>>(new Set());
 
   const [combo, setCombo] = useState(0);
   const comboTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -284,21 +285,30 @@ export default function CoinsScreen() {
       const adjustedValue = Math.round(coin.value * mult);
       collectCoin(adjustedValue);
 
-      if (!isAuto) {
-        setCombo((prev) => {
-          const next = Math.min(prev + 1, MAX_COMBO);
-          comboRef.current = next;
-          return next;
-        });
-        if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
-        comboTimerRef.current = setTimeout(() => {
-          setCombo(0);
-          comboRef.current = 0;
-        }, COMBO_WINDOW_MS);
+      if (isAuto) {
+        setAutoCollectedIds((prev) => new Set(prev).add(coin.id));
       }
+
+      setCombo((prev) => {
+        const next = Math.min(prev + 1, MAX_COMBO);
+        comboRef.current = next;
+        return next;
+      });
+      if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
+      comboTimerRef.current = setTimeout(() => {
+        setCombo(0);
+        comboRef.current = 0;
+      }, COMBO_WINDOW_MS);
 
       setTimeout(() => {
         setCoins((prev) => prev.filter((c) => c.id !== coin.id));
+        if (isAuto) {
+          setAutoCollectedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(coin.id);
+            return next;
+          });
+        }
       }, 400);
     },
     [collectCoin]
@@ -460,6 +470,7 @@ export default function CoinsScreen() {
                 lifetimeMs={coinLifetime}
                 onCollect={handleCollect}
                 onExpire={handleExpire}
+                autoCollected={autoCollectedIds.has(coin.id)}
               />
             ))}
             <ComboCounter combo={combo} />
