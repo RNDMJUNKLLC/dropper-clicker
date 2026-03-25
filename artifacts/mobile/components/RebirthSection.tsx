@@ -215,7 +215,7 @@ export default function RebirthSection() {
         label="REBIRTH II"
         threshold={REBIRTH_THRESHOLDS[2]}
         currentPoints={state.points}
-        perks={["+25 prestige upgrade caps", "Prestige keeps upgrades"]}
+        perks={["Prestige keeps drop upgrades"]}
         color={Colors.rebirthPink}
         active={canRebirth2}
         unlocked={state.rebirthTier >= 2}

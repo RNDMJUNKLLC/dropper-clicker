@@ -132,9 +132,9 @@ export function prestigeUpgradeCost(upgrade: PrestigeUpgrade): number {
 
 export function getEffectivePrestigeMaxBuys(
   baseMax: number,
-  tier2: boolean
+  _tier2: boolean
 ): number {
-  return tier2 ? baseMax + 25 : baseMax;
+  return baseMax;
 }
 
 export function calcPrestigePoints(currentPoints: number): number {
