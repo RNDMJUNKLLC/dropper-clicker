@@ -1,16 +1,19 @@
+import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import CoinSprite, { CoinRarity, SpawnedCoin } from "@/components/CoinSprite";
 import UpgradeCard from "@/components/UpgradeCard";
-import { coinUpgradeCost, useGame } from "@/context/GameContext";
+import { coinUpgradeCost, useGame, type ReadingUpgradeId } from "@/context/GameContext";
 import { formatNumber } from "@/utils/format";
 
 const COIN_SIZE = 58;
@@ -31,15 +34,26 @@ const RARITY_VALUES: Record<CoinRarity, number> = {
   legendary: 100,
 };
 
+const READING_UPGRADES: { id: ReadingUpgradeId; label: string; desc: string; multPer: number; unit: string }[] = [
+  { id: "morePoints", label: "More Points", desc: "+5% points per invest", multPer: 0.05, unit: "x" },
+  { id: "moreXP", label: "More XP", desc: "+18% XP per invest", multPer: 0.18, unit: "x" },
+  { id: "moreRP", label: "More RP", desc: "+10% reading pts per invest", multPer: 0.1, unit: "x" },
+];
+
 export default function CoinsScreen() {
   const {
     state,
     collectCoin,
     buyCoinUpgrade,
+    buyBook,
+    investReading,
     bonusesUnlocked,
+    readingUnlocked,
     coinSpawnIntervalMs,
     coinSpawnCap,
     coinSpawnBulk,
+    readingPointsPerSec,
+    bookCost,
   } = useGame();
   const insets = useSafeAreaInsets();
   const topPad = Math.max(insets.top, 20);
@@ -212,6 +226,191 @@ export default function CoinsScreen() {
             })}
           </View>
         </View>
+
+        <View style={styles.divider} />
+
+        {readingUnlocked ? (
+          <View style={styles.section}>
+            <View style={styles.readingHeader}>
+              <Text style={[styles.sectionTitle, { color: Colors.rebirthBlue }]}>
+                READING
+              </Text>
+              <View style={[styles.balanceBadge, { backgroundColor: Colors.rebirthBlue + "22" }]}>
+                <Text style={[styles.balanceValue, { color: Colors.rebirthBlue }]}>
+                  {formatNumber(Math.floor(state.reading.readingPoints))}
+                </Text>
+                <Text style={[styles.balanceLabel, { color: Colors.rebirthBlue + "AA" }]}>
+                  {" "}RP
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.readingStats}>
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: Colors.rebirthBlue }]}>
+                  {state.reading.books}
+                </Text>
+                <Text style={styles.statLabel}>BOOKS</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: Colors.rebirthBlue }]}>
+                  {readingPointsPerSec.toFixed(1)}/s
+                </Text>
+                <Text style={styles.statLabel}>RP RATE</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: Colors.rebirthBlue }]}>
+                  {formatNumber(Math.floor(state.reading.readingPoints))}
+                </Text>
+                <Text style={styles.statLabel}>RP TOTAL</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.bookButton,
+                state.coins >= bookCost
+                  ? { borderColor: Colors.rebirthBlue + "88" }
+                  : { opacity: 0.5 },
+              ]}
+              onPress={() => {
+                buyBook();
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }
+              }}
+              disabled={state.coins < bookCost}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.bookButtonTitle}>Buy Book</Text>
+              <Text style={styles.bookButtonDesc}>
+                +1 reading point/sec
+              </Text>
+              <View
+                style={[
+                  styles.bookCostBadge,
+                  state.coins >= bookCost
+                    ? { backgroundColor: Colors.rebirthBlue + "22" }
+                    : { backgroundColor: Colors.bgBorder },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.bookCostText,
+                    state.coins >= bookCost
+                      ? { color: Colors.rebirthBlue }
+                      : { color: Colors.textDim },
+                  ]}
+                >
+                  {formatNumber(bookCost)} coins
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <Text style={[styles.sectionTitle, { color: Colors.rebirthBlue, marginTop: 8 }]}>
+              READING UPGRADES
+            </Text>
+
+            {READING_UPGRADES.map((upg) => {
+              const invested = state.reading.upgrades[upg.id];
+              const currentMult = (1 + invested * upg.multPer).toFixed(2);
+              const rp = Math.floor(state.reading.readingPoints);
+
+              return (
+                <View key={upg.id} style={styles.readingUpgradeCard}>
+                  <View style={styles.readingUpgradeTop}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.readingUpgradeName}>{upg.label}</Text>
+                      <Text style={styles.readingUpgradeDesc}>
+                        {upg.desc}
+                      </Text>
+                    </View>
+                    <View style={styles.readingUpgradeStat}>
+                      <Text style={styles.readingUpgradeMultValue}>
+                        {currentMult}{upg.unit}
+                      </Text>
+                      <Text style={styles.readingUpgradeMultLabel}>
+                        {invested} invested
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.investRow}>
+                    {[1, 10].map((amt) => (
+                      <TouchableOpacity
+                        key={amt}
+                        style={[
+                          styles.investButton,
+                          rp >= amt
+                            ? { borderColor: Colors.rebirthBlue + "66" }
+                            : { opacity: 0.4 },
+                        ]}
+                        disabled={rp < amt}
+                        onPress={() => {
+                          investReading(upg.id, amt);
+                          if (Platform.OS !== "web") {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }
+                        }}
+                        activeOpacity={0.75}
+                      >
+                        <Text
+                          style={[
+                            styles.investButtonText,
+                            rp >= amt ? { color: Colors.rebirthBlue } : { color: Colors.textDim },
+                          ]}
+                        >
+                          +{amt}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity
+                      style={[
+                        styles.investButton,
+                        { flex: 1 },
+                        rp >= 1
+                          ? { borderColor: Colors.rebirthBlue + "66" }
+                          : { opacity: 0.4 },
+                      ]}
+                      disabled={rp < 1}
+                      onPress={() => {
+                        investReading(upg.id, rp);
+                        if (Platform.OS !== "web") {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }
+                      }}
+                      activeOpacity={0.75}
+                    >
+                      <Text
+                        style={[
+                          styles.investButtonText,
+                          rp >= 1 ? { color: Colors.rebirthBlue } : { color: Colors.textDim },
+                        ]}
+                      >
+                        MAX ({formatNumber(rp)})
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <View
+              style={[
+                styles.readingLockedHint,
+                { borderColor: Colors.rebirthBlue + "33" },
+              ]}
+            >
+              <Text style={[styles.readingLockedTitle, { color: Colors.rebirthBlue }]}>
+                READING
+              </Text>
+              <Text style={styles.readingLockedText}>
+                Unlock via the "Unlock Reading" node in the Upgrade Tree (Row 7)
+              </Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -342,5 +541,134 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     textAlign: "center",
     lineHeight: 20,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.bgBorder,
+    marginVertical: 4,
+  },
+  readingHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  readingStats: {
+    flexDirection: "row",
+    backgroundColor: Colors.bgCard,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.bgBorder,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    justifyContent: "space-around",
+    marginBottom: 10,
+  },
+  bookButton: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.bgBorder,
+    gap: 6,
+    alignItems: "center",
+  },
+  bookButtonTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.rebirthBlue,
+    fontFamily: "Inter_700Bold",
+  },
+  bookButtonDesc: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontFamily: "Inter_400Regular",
+  },
+  bookCostBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  bookCostText: {
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+  },
+  readingUpgradeCard: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.bgBorder,
+    gap: 10,
+  },
+  readingUpgradeTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  readingUpgradeName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.rebirthBlue,
+    fontFamily: "Inter_700Bold",
+  },
+  readingUpgradeDesc: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  readingUpgradeStat: {
+    alignItems: "flex-end",
+  },
+  readingUpgradeMultValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    fontFamily: "Inter_700Bold",
+  },
+  readingUpgradeMultLabel: {
+    fontSize: 10,
+    color: Colors.textDim,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  investRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  investButton: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: Colors.bgBorder,
+    alignItems: "center",
+  },
+  investButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+  },
+  readingLockedHint: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.bgBorder,
+    gap: 6,
+  },
+  readingLockedTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 3,
+    fontFamily: "Inter_700Bold",
+  },
+  readingLockedText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontFamily: "Inter_400Regular",
   },
 });
