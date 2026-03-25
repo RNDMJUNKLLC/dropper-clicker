@@ -542,7 +542,8 @@ function reducer(
     case "TICK_PASSIVE_PP": {
       if (state.rebirthTier < 3) return { state, leveledUp: false };
       if (state.prestigePoints <= 0) return { state, leveledUp: false };
-      const ppGain = Math.max(1, Math.floor(state.prestigePoints * 0.1));
+      const ppGain = Math.floor(state.prestigePoints * 0.1);
+      if (ppGain <= 0) return { state, leveledUp: false };
       return {
         state: {
           ...state,
@@ -658,7 +659,10 @@ function reducer(
       });
       if (cCandidates.length === 0) return { state, leveledUp: false };
       const cId = cCandidates.reduce((a, b) =>
-        state.coinUpgrades[a].buys <= state.coinUpgrades[b].buys ? a : b
+        coinUpgradeCost(state.coinUpgrades[a]) <=
+        coinUpgradeCost(state.coinUpgrades[b])
+          ? a
+          : b
       );
       const cUpg = state.coinUpgrades[cId];
       return {
