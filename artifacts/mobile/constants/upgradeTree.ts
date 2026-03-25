@@ -51,9 +51,13 @@ export const UPGRADE_TREE: TreeNode[] = [
   { id: "r9_cheaperBooks", name: "Cheaper Books", description: "50% less book price scaling", row: 9, cost: 150000, currency: "coins", effectType: "cheaperBooks", effectValue: 0.5, requiresRebirthTier: 2 },
   { id: "r9_moreXP", name: "More XP", description: "x3 XP", row: 9, cost: 75000, currency: "readingPoints", effectType: "xpMult", effectValue: 3, requiresRebirthTier: 2 },
   { id: "r9_xpBoost", name: "More XP", description: "+10% XP per 1B coins", row: 9, cost: 3e22, currency: "points", effectType: "xpBoostByCoins", effectValue: 0.1, requiresRebirthTier: 2, requiresLevel: 14 },
+
+  { id: "r10_morePoints", name: "More Points", description: "x5 points", row: 10, cost: 500000, currency: "readingPoints", effectType: "pointsMult", effectValue: 5, requiresRebirthTier: 2 },
+  { id: "r10_moreCoins", name: "More Coins", description: "x5 coins", row: 10, cost: 1e24, currency: "points", effectType: "coinsMult", effectValue: 5, requiresRebirthTier: 2 },
+  { id: "r10_moreRP", name: "More Reading Pts", description: "x5 reading points", row: 10, cost: 500000, currency: "coins", effectType: "readingPointsMult", effectValue: 5, requiresRebirthTier: 2 },
 ];
 
-export const TREE_ROW_COUNT = 9;
+export const TREE_ROW_COUNT = 10;
 
 export function getNodesInRow(row: number): TreeNode[] {
   return UPGRADE_TREE.filter((n) => n.row === row);

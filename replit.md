@@ -99,7 +99,7 @@ Expo React Native mobile game "Dropper Clicker" — a 2D incremental clicker wit
 
 - **Game tab**: Manual DROP button with cooldown (2s base, reducible via rapidDrop upgrade, min 500ms), XP/level system with additive multipliers (pts: 1+(level-1)*2.5, XP: 1+(level-1)*0.5), drop upgrades (3: dropAmount, dropXP, rapidDrop), prestige system (unlocks at 1000 current points, PP = floor(pts/1000)), rebirth system (5 tiers with point-based costs)
 - **Bonuses tab** (unlocked at level 8): Coins spawn every 2s (cap 10, no expiry), tap to collect. Coin upgrades (3): moreCash (2x pts, max 10), moreXP (2x XP, max 10), fasterSpawn (-0.2s interval, max 4). No combo/frenzy system.
-- **Upgrade Tree** (unlocked at level 7): 9 rows of permanent nodes with multi-currency costs (points, PP, coins, RP), tree-wide multipliers. Defined in `constants/upgradeTree.ts`.
+- **Upgrade Tree** (unlocked at level 7): 10 rows of permanent nodes with multi-currency costs (points, PP, coins, RP), tree-wide multipliers. Rows 9-10 gated behind Rebirth Tier 2. Defined in `constants/upgradeTree.ts`.
 - **Reading system** (unlocked via tree node r7_unlockReading): Books cost 10k coins +10%/buy, earn 1 RP/sec each. 3 reading upgrades: morePoints, moreXP, moreRP.
 - **Prestige**: Max 10 buys per upgrade (+25 with tier 2 rebirth). Upgrades: morePoints (2x), moreXP (2x), morePP (2x). Tier 2 rebirth keeps upgrades across prestiges.
 - **Rebirth**: 5 tiers, visible at level 10. Costs: T1=1e15, T2=2.5e16, T3=5e17, T4=2.5e19, T5=1e21. Uses `rebirthTier` integer (not boolean perks). Resets points, XP, level, upgrades, prestige; keeps coins, tree, reading.

@@ -227,7 +227,7 @@ export default function RebirthSection() {
         label="REBIRTH III"
         threshold={REBIRTH_THRESHOLDS[3]}
         currentPoints={state.points}
-        perks={["x3 reading points", "Unlock tree rows 9+"]}
+        perks={["x3 reading points", "Unlock tree rows 9-10"]}
         color={Colors.rebirthBlue}
         active={canRebirth3}
         unlocked={state.rebirthTier >= 3}
