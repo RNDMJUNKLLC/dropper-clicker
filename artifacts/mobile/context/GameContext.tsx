@@ -535,6 +535,10 @@ function reducer(
           state: {
             ...state,
             points: 0,
+            runPoints: 0,
+            totalDrops: 0,
+            xp: 0,
+            level: 1,
             prestigePoints: state.prestigePoints + totalPP,
           },
           leveledUp: false,
