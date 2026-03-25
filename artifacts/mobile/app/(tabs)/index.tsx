@@ -20,6 +20,7 @@ import PrestigeSection from "@/components/PrestigeSection";
 import RebirthSection from "@/components/RebirthSection";
 import StatsPanel from "@/components/StatsPanel";
 import UpgradeCard from "@/components/UpgradeCard";
+import UpgradeTree from "@/components/UpgradeTree";
 import CloudSyncIndicator from "@/components/CloudSyncIndicator";
 import UserIndicator from "@/components/UserIndicator";
 import XPBar from "@/components/XPBar";
@@ -240,16 +241,23 @@ export default function GameScreen() {
           </View>
         )}
 
-        {treeUnlocked && (
+        {treeUnlocked ? (
           <View style={styles.section}>
-            <View style={styles.pointTreePlaceholder}>
-              <Text style={styles.pointTreeIcon}>🌳</Text>
-              <Text style={styles.pointTreeTitle}>UPGRADE TREE</Text>
-              <Text style={styles.pointTreeSubtitle}>
-                {state.purchasedTreeNodes.length} nodes unlocked
+            <UpgradeTree />
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <View
+              style={[
+                styles.lockedHint,
+                { borderColor: Colors.rebirth + "33" },
+              ]}
+            >
+              <Text style={[styles.lockedTitle, { color: Colors.rebirth }]}>
+                UPGRADE TREE
               </Text>
-              <Text style={styles.pointTreeDesc}>
-                Permanent stat boosts that persist across rebirths. Full tree UI coming soon.
+              <Text style={styles.lockedText}>
+                Reach level 7 to unlock the Upgrade Tree
               </Text>
             </View>
           </View>
@@ -391,38 +399,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textDim,
     fontFamily: "Inter_400Regular",
-  },
-  pointTreePlaceholder: {
-    borderWidth: 1.5,
-    borderColor: Colors.rebirth + "44",
-    borderRadius: 14,
-    backgroundColor: Colors.bgCard,
-    padding: 24,
-    alignItems: "center" as const,
-    gap: 8,
-  },
-  pointTreeIcon: {
-    fontSize: 36,
-  },
-  pointTreeTitle: {
-    fontSize: 14,
-    fontWeight: "700" as const,
-    color: Colors.rebirth,
-    letterSpacing: 3,
-    fontFamily: "Inter_700Bold",
-  },
-  pointTreeSubtitle: {
-    fontSize: 12,
-    fontWeight: "600" as const,
-    color: Colors.textSecondary,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 1,
-  },
-  pointTreeDesc: {
-    fontSize: 12,
-    color: Colors.textDim,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center" as const,
-    lineHeight: 18,
   },
 });
