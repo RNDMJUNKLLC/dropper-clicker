@@ -106,7 +106,7 @@ type Action =
   | { type: "LOAD"; state: GameState };
 
 const XP_BASE = 100;
-const XP_SCALE = 3.5;
+const XP_SCALE = 5;
 const DROP_COST_SCALE = 1.14;
 const PRESTIGE_COST_SCALE = 1.5;
 const CLICK_COOLDOWN_BASE = 2000;
