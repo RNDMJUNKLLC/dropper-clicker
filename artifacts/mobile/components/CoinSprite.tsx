@@ -102,17 +102,27 @@ export default function CoinSprite({
     return () => clearTimeout(timer);
   }, []);
 
-  const handleCollect = () => {
-    if (collected.value) return;
-    collected.value = true;
-
-    collectScale.value = withTiming(autoCollected ? 0.5 : 1.5, { duration: 150 });
+  const playCollectAnimation = (isAuto: boolean) => {
+    collectScale.value = withTiming(isAuto ? 0.5 : 1.5, { duration: 150 });
     collectOpacity.value = withDelay(100, withTiming(0, { duration: 200 }));
     plusOpacity.value = withSequence(
       withTiming(1, { duration: 100 }),
       withDelay(600, withTiming(0, { duration: 300 }))
     );
     plusY.value = withTiming(-40, { duration: 800, easing: Easing.out(Easing.quad) });
+  };
+
+  useEffect(() => {
+    if (autoCollected && !collected.value) {
+      collected.value = true;
+      playCollectAnimation(true);
+    }
+  }, [autoCollected]);
+
+  const handleCollect = () => {
+    if (collected.value) return;
+    collected.value = true;
+    playCollectAnimation(false);
 
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

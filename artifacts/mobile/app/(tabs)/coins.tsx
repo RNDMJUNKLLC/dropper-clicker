@@ -214,6 +214,7 @@ export default function CoinsScreen() {
   const spawnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoCollectTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [autoCollectedIds, setAutoCollectedIds] = useState<Set<string>>(new Set());
+  const collectedIdsRef = useRef<Set<string>>(new Set());
 
   const [combo, setCombo] = useState(0);
   const comboTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -278,8 +279,13 @@ export default function CoinsScreen() {
     };
   }, [coinsUnlocked, spawnInterval, spawnCoin]);
 
+  const comboRef = useRef(0);
+
   const handleCollect = useCallback(
     (coin: SpawnedCoin, isAuto?: boolean) => {
+      if (collectedIdsRef.current.has(coin.id)) return;
+      collectedIdsRef.current.add(coin.id);
+
       const currentCombo = comboRef.current;
       const mult = 1 + currentCombo * COMBO_MULT_PER_LEVEL;
       const adjustedValue = Math.round(coin.value * mult);
@@ -302,6 +308,7 @@ export default function CoinsScreen() {
 
       setTimeout(() => {
         setCoins((prev) => prev.filter((c) => c.id !== coin.id));
+        collectedIdsRef.current.delete(coin.id);
         if (isAuto) {
           setAutoCollectedIds((prev) => {
             const next = new Set(prev);
@@ -314,8 +321,6 @@ export default function CoinsScreen() {
     [collectCoin]
   );
 
-  const comboRef = useRef(0);
-
   const handleExpire = useCallback((id: string) => {
     setCoins((prev) => prev.filter((c) => c.id !== id));
   }, []);
@@ -326,9 +331,9 @@ export default function CoinsScreen() {
 
     autoCollectTimerRef.current = setInterval(() => {
       const currentCoins = coinsRef.current;
-      if (currentCoins.length > 0) {
-        const oldest = currentCoins[0];
-        handleCollect(oldest, true);
+      const target = currentCoins.find((c) => !collectedIdsRef.current.has(c.id));
+      if (target) {
+        handleCollect(target, true);
       }
     }, autoCollectInterval);
 
