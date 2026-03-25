@@ -73,6 +73,12 @@ export default function DropButton({ onDrop, dropAmount, cooldownMs }: DropButto
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cooldownProgress = useSharedValue(1);
 
+  React.useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+    };
+  }, []);
+
   const handlePress = useCallback(() => {
     if (onCooldown) return;
     onDrop();
