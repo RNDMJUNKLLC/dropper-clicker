@@ -285,7 +285,7 @@ export default function CoinsScreen() {
             <TouchableOpacity
               style={[
                 styles.bookButton,
-                state.coins >= bookCost || state.rebirthTier >= 4
+                state.coins >= bookCost
                   ? { borderColor: Colors.rebirthBlue + "88" }
                   : { opacity: 0.5 },
               ]}
@@ -295,7 +295,7 @@ export default function CoinsScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 }
               }}
-              disabled={state.coins < bookCost && state.rebirthTier < 4}
+              disabled={state.coins < bookCost}
               activeOpacity={0.75}
             >
               <View style={styles.bookTitleRow}>
@@ -303,7 +303,7 @@ export default function CoinsScreen() {
                 {state.rebirthTier >= 4 && (
                   <View style={styles.autoBadge}>
                     <Text style={[styles.autoBadgeText, { color: Colors.rebirthEmerald }]}>
-                      AUTO (FREE)
+                      AUTO
                     </Text>
                   </View>
                 )}
@@ -314,24 +314,20 @@ export default function CoinsScreen() {
               <View
                 style={[
                   styles.bookCostBadge,
-                  state.rebirthTier >= 4
-                    ? { backgroundColor: Colors.rebirthEmerald + "22" }
-                    : state.coins >= bookCost
-                      ? { backgroundColor: Colors.rebirthBlue + "22" }
-                      : { backgroundColor: Colors.bgBorder },
+                  state.coins >= bookCost
+                    ? { backgroundColor: Colors.rebirthBlue + "22" }
+                    : { backgroundColor: Colors.bgBorder },
                 ]}
               >
                 <Text
                   style={[
                     styles.bookCostText,
-                    state.rebirthTier >= 4
-                      ? { color: Colors.rebirthEmerald }
-                      : state.coins >= bookCost
-                        ? { color: Colors.rebirthBlue }
-                        : { color: Colors.textDim },
+                    state.coins >= bookCost
+                      ? { color: Colors.rebirthBlue }
+                      : { color: Colors.textDim },
                   ]}
                 >
-                  {state.rebirthTier >= 4 ? "FREE" : `${formatNumber(bookCost)} coins`}
+                  {formatNumber(bookCost)} coins
                 </Text>
               </View>
             </TouchableOpacity>
