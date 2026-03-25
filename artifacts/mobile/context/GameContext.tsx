@@ -583,7 +583,33 @@ function reducer(
     }
 
     case "LOAD": {
-      const s = action.state as any;
+      interface LegacyPerks {
+        autoBuyUpgrades?: boolean;
+        bonusMult?: boolean;
+        autoBuyPrestigeUpgrades?: boolean;
+        tripleMult?: boolean;
+        diamondsUnlocked?: boolean;
+      }
+      interface LegacyDropUpgrades {
+        dropAmount?: Partial<DropUpgrade>;
+        dropXP?: Partial<DropUpgrade>;
+        rapidDrop?: Partial<DropUpgrade>;
+        dropTimer?: Partial<DropUpgrade>;
+      }
+      interface LegacyCoinUpgrades {
+        moreCash?: Partial<CoinUpgrade>;
+        moreXP?: Partial<CoinUpgrade>;
+        fasterSpawn?: Partial<CoinUpgrade>;
+        pointSurge?: Partial<CoinUpgrade>;
+        xpSurge?: Partial<CoinUpgrade>;
+        coinRush?: Partial<CoinUpgrade>;
+      }
+      type LegacyState = Partial<GameState> & {
+        rebirthPerks?: LegacyPerks;
+        dropUpgrades?: LegacyDropUpgrades;
+        coinUpgrades?: LegacyCoinUpgrades;
+      };
+      const s: LegacyState = action.state as LegacyState;
 
       let rebirthTier = s.rebirthTier ?? 0;
       if (rebirthTier === 0 && s.rebirthPerks) {
@@ -595,7 +621,7 @@ function reducer(
         else if (rp.autoBuyUpgrades) rebirthTier = 1;
       }
 
-      const loadedDrop = s.dropUpgrades ?? {};
+      const loadedDrop: LegacyDropUpgrades = s.dropUpgrades ?? {};
       const mergedDrop: GameState["dropUpgrades"] = {
         dropAmount: {
           ...initialDropUpgrades.dropAmount,
@@ -648,7 +674,7 @@ function reducer(
         },
       };
 
-      const loadedCoinUpg = s.coinUpgrades ?? {} as any;
+      const loadedCoinUpg: LegacyCoinUpgrades = s.coinUpgrades ?? {};
       const oldPointSurge = loadedCoinUpg.pointSurge ?? loadedCoinUpg.moreCash;
       const oldXpSurge = loadedCoinUpg.xpSurge ?? loadedCoinUpg.moreXP;
       const oldCoinRush = loadedCoinUpg.coinRush ?? loadedCoinUpg.fasterSpawn;
