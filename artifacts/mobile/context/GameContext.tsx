@@ -138,9 +138,9 @@ export function prestigeUpgradeCost(upgrade: PrestigeUpgrade): number {
 
 export function getEffectivePrestigeMaxBuys(
   baseMax: number,
-  tier2: boolean
+  _tier2: boolean
 ): number {
-  return tier2 ? baseMax + 25 : baseMax;
+  return baseMax;
 }
 
 export function getEffectiveDropMaxBuys(
@@ -725,17 +725,11 @@ function reducer(
 
       return {
         state: {
-          ...state,
-          points: 0,
-          runPoints: 0,
-          xp: 0,
-          level: 1,
-          totalDrops: 0,
-          prestigePoints: 0,
-          dropUpgrades: { ...initialDropUpgrades },
-          prestigeUpgrades: { ...initialPrestigeUpgrades },
+          ...initialState,
           rebirthCount: state.rebirthCount + 1,
           rebirthTier: Math.max(state.rebirthTier, which),
+          lifetimePoints: state.lifetimePoints,
+          lifetimeCoins: state.lifetimeCoins,
         },
         leveledUp: false,
       };

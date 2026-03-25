@@ -101,10 +101,10 @@ Expo React Native mobile game "Dropper Clicker" — a 2D incremental clicker wit
 - **Bonuses tab** (unlocked at level 8): Coins spawn every 2s (cap 10, no expiry), tap to collect. Coin upgrades (3): moreCash (2x pts, max 10), moreXP (2x XP, max 10), fasterSpawn (-0.2s interval, max 4). No combo/frenzy system.
 - **Upgrade Tree** (unlocked at level 7): 10 rows of permanent nodes with multi-currency costs (points, PP, coins, RP), tree-wide multipliers. Rows 9-10 gated behind Rebirth Tier 2. Defined in `constants/upgradeTree.ts`.
 - **Reading system** (unlocked via tree node r7_unlockReading): Books cost 10k coins +10%/buy, earn 1 RP/sec each. 3 reading upgrades: morePoints, moreXP, moreRP.
-- **Prestige**: Base max 10 buys per upgrade (T2 adds +25). Upgrades: morePoints (2x), moreXP (2x), morePP (2x). Tier 2 rebirth keeps drop upgrades across prestiges.
-- **Rebirth**: 5 tiers, visible at level 10. Costs: T1=1e15, T2=2.5e16, T3=5e17, T4=2.5e19, T5=1e21. Uses `rebirthTier` integer (not boolean perks). Resets points, XP, level, upgrades, prestige; keeps coins, tree, reading.
+- **Prestige**: Max 10 buys per prestige upgrade. Upgrades: morePoints (2x), moreXP (2x), morePP (2x). Tier 2 rebirth keeps drop upgrades across prestiges.
+- **Rebirth**: 5 tiers, visible at level 10. Costs: T1=1e15, T2=2.5e16, T3=5e17, T4=2.5e19, T5=1e21. Uses `rebirthTier` integer (not boolean perks). Resets ALL progress (points, XP, level, upgrades, prestige, PP, coins, tree, reading). Only lifetimePoints, lifetimeCoins, rebirthCount, and rebirthTier persist.
   - T1: Auto-click 0.5s, 2x all stats per rebirth, x3 coin value
-  - T2: +25 max buys (drop/prestige upgrades), x3 reading points, rows 9-10 unlocked, prestige keeps drop upgrades
+  - T2: +25 max buys (drop upgrades only), x3 reading points, rows 9-10 unlocked, prestige keeps drop upgrades
   - T3: Auto-buy drop & prestige upgrades (free, 1s), passive +10% PP/sec
   - T4: Auto-invest reading points evenly (2s), auto-buy books free (2s)
   - T5: Auto-buy coin upgrades free (1s)

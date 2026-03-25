@@ -182,7 +182,7 @@ export default function RebirthSection() {
 
     Alert.alert(
       `Rebirth ${which}`,
-      `This resets points, XP, level, upgrades, prestige, and PP. Coins, tree, and reading are kept. Your new perks are permanently unlocked.`,
+      `This resets ALL progress: points, XP, level, upgrades, prestige, PP, coins, tree, and reading. Your new perks are permanently unlocked.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -235,7 +235,7 @@ export default function RebirthSection() {
         threshold={REBIRTH_THRESHOLDS[2]}
         currentPoints={state.points}
         perks={[
-          "+25 max buys (drop & prestige upgrades)",
+          "+25 max buys (drop upgrades)",
           "x3 reading points",
           "Unlock tree rows 9-10",
           "Prestige keeps drop upgrades",
