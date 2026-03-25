@@ -70,7 +70,6 @@ export default function GameScreen() {
     xpRequired,
     levelPointsMult,
     levelXPMult,
-    showUpgrades,
     canPrestige,
     showRebirthSection,
     treeUnlocked,
@@ -171,8 +170,7 @@ export default function GameScreen() {
           levelXPMult={levelXPMult}
         />
 
-        {showUpgrades && (
-          <View style={styles.section}>
+        <View style={styles.section}>
             <View style={styles.sectionTitleRow}>
               <Text style={styles.sectionTitle}>UPGRADES</Text>
               {state.rebirthTier >= 3 && (
@@ -205,8 +203,7 @@ export default function GameScreen() {
                 );
               })}
             </View>
-          </View>
-        )}
+        </View>
 
         {showPrestigeSection ? (
           <View style={styles.section}>

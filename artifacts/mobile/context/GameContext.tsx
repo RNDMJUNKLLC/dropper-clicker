@@ -940,7 +940,6 @@ interface GameContextValue {
   canRebirth3: boolean;
   canRebirth4: boolean;
   canRebirth5: boolean;
-  showUpgrades: boolean;
   bonusesUnlocked: boolean;
   treeUnlocked: boolean;
   showRebirthSection: boolean;
@@ -1282,7 +1281,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     state.points >= REBIRTH_THRESHOLDS[5] &&
     state.level >= REBIRTH_MIN_LEVEL &&
     state.rebirthTier >= 4;
-  const showUpgrades = state.totalDrops >= 10;
   const bonusesUnlocked = state.level >= 8;
   const treeUnlocked = state.level >= 7;
   const readingUnlocked = state.purchasedTreeNodes.includes(
@@ -1338,7 +1336,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth3,
       canRebirth4,
       canRebirth5,
-      showUpgrades,
       bonusesUnlocked,
       treeUnlocked,
       showRebirthSection,
@@ -1378,7 +1375,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth3,
       canRebirth4,
       canRebirth5,
-      showUpgrades,
       bonusesUnlocked,
       treeUnlocked,
       showRebirthSection,
