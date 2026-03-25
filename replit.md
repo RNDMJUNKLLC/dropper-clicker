@@ -93,6 +93,21 @@ Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used b
 
 Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
 
+### `artifacts/mobile` (`@workspace/mobile`)
+
+Expo React Native mobile game "Dropper Clicker" — a 2D incremental clicker with three progression layers.
+
+- **Game tab**: Drop button, auto-drop timer, XP/level system, drop upgrades (3), prestige system with prestige upgrades (3), rebirth system (5 tiers)
+- **Coins tab** (unlocked after Rebirth I): Mini-game where coins spawn and can be tapped to collect. Features:
+  - Coin upgrades (3): Coin Magnet, Lucky Drops, Coin Rush (1.3x cost scaling)
+  - Boosters (4): Point Surge (2x pts/drop), XP Surge (2x XP/drop), Auto Collector (auto-taps coins), Coin Multiplier (1.5x coin value) — all use 2x cost scaling
+  - Coin Frenzy: Active ability (2x spawn rate for 30s, 120s cooldown, one-time 2000 coin unlock)
+  - Combo system: Collecting coins within 2.5s builds combo (max 12, up to 4x multiplier)
+- **Auth**: Replit Auth (OIDC + PKCE) for cloud saves
+- **Cloud sync**: 10s debounced sync via GET/PUT /api/saves, offline queue, conflict resolution by lifetimePoints
+- **State**: GameContext.tsx manages all game state via useReducer; persisted to AsyncStorage (key: "dropper_game_v3") + cloud
+- **Design**: Dark navy (#050D1A) bg, neon cyan (#00E5FF) accents, gold for prestige, purple for rebirth
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.

@@ -28,7 +28,7 @@ export interface PrestigeUpgrade {
 }
 
 export interface CoinUpgrade {
-  id: "coinMagnet" | "luckyDrops" | "coinRush";
+  id: "coinMagnet" | "luckyDrops" | "coinRush" | "pointSurge" | "xpSurge" | "autoCollector" | "coinMultiplier";
   buys: number;
   maxBuys: number;
   baseCost: number;
@@ -69,7 +69,12 @@ export interface GameState {
     coinMagnet: CoinUpgrade;
     luckyDrops: CoinUpgrade;
     coinRush: CoinUpgrade;
+    pointSurge: CoinUpgrade;
+    xpSurge: CoinUpgrade;
+    autoCollector: CoinUpgrade;
+    coinMultiplier: CoinUpgrade;
   };
+  coinFrenzyUnlocked: boolean;
 }
 
 type Action =
@@ -78,6 +83,7 @@ type Action =
   | { type: "BUY_PRESTIGE_UPGRADE"; id: PrestigeUpgrade["id"] }
   | { type: "COLLECT_COIN"; value: number }
   | { type: "BUY_COIN_UPGRADE"; id: CoinUpgrade["id"] }
+  | { type: "BUY_COIN_FRENZY" }
   | { type: "PRESTIGE" }
   | { type: "REBIRTH"; which: 1 | 2 | 3 | 4 | 5 }
   | { type: "LOAD"; state: GameState };
@@ -86,6 +92,9 @@ const XP_BASE = 100;
 const XP_SCALE = 3.5;
 const DROP_COST_SCALE = 1.14;
 const PRESTIGE_COST_SCALE = 1.5;
+const COIN_COST_SCALE = 1.3;
+const BOOSTER_COST_SCALE = 2.0;
+const COIN_FRENZY_COST = 2000;
 
 export function xpForLevel(level: number): number {
   return XP_BASE * Math.pow(XP_SCALE, level - 1);
@@ -107,18 +116,22 @@ export function calcPrestigePoints(currentPoints: number): number {
   return Math.pow(currentPoints / 1_000_000, 0.43);
 }
 
-const COIN_COST_SCALE = 1.3;
+const BOOSTER_IDS: CoinUpgrade["id"][] = ["pointSurge", "xpSurge", "autoCollector", "coinMultiplier"];
 
 export function coinUpgradeCost(upgrade: CoinUpgrade): number {
-  return Math.ceil(upgrade.baseCost * Math.pow(COIN_COST_SCALE, upgrade.buys));
+  const scale = BOOSTER_IDS.includes(upgrade.id) ? BOOSTER_COST_SCALE : COIN_COST_SCALE;
+  return Math.ceil(upgrade.baseCost * Math.pow(scale, upgrade.buys));
 }
+
+export { COIN_FRENZY_COST };
 
 function getDropAmount(state: GameState): number {
   const baseAmount = 1 + state.dropUpgrades.dropAmount.buys;
   const prestigeMult = Math.pow(2, state.prestigeUpgrades.morePoints.buys);
   const rebirthMult = state.rebirthPerks.tripleMult ? 3 : 1;
   const levelMult = getLevelMultiplier(state.level);
-  return baseAmount * prestigeMult * rebirthMult * levelMult;
+  const coinBoost = Math.pow(2, state.coinUpgrades.pointSurge.buys);
+  return baseAmount * prestigeMult * rebirthMult * levelMult * coinBoost;
 }
 
 function getXPAmount(state: GameState): number {
@@ -126,7 +139,8 @@ function getXPAmount(state: GameState): number {
   const prestigeMult = Math.pow(2, state.prestigeUpgrades.moreXP.buys);
   const r2Mult = state.rebirthPerks.bonusMult ? 2 : 1;
   const r4Mult = state.rebirthPerks.tripleMult ? 3 : 1;
-  return baseXP * prestigeMult * r2Mult * r4Mult;
+  const coinBoost = Math.pow(2, state.coinUpgrades.xpSurge.buys);
+  return baseXP * prestigeMult * r2Mult * r4Mult * coinBoost;
 }
 
 function getDropTimer(state: GameState): number {
@@ -154,6 +168,10 @@ const initialCoinUpgrades: GameState["coinUpgrades"] = {
   coinMagnet: { id: "coinMagnet", buys: 0, maxBuys: 10, baseCost: 10 },
   luckyDrops: { id: "luckyDrops", buys: 0, maxBuys: 10, baseCost: 25 },
   coinRush: { id: "coinRush", buys: 0, maxBuys: 10, baseCost: 50 },
+  pointSurge: { id: "pointSurge", buys: 0, maxBuys: 10, baseCost: 500 },
+  xpSurge: { id: "xpSurge", buys: 0, maxBuys: 10, baseCost: 750 },
+  autoCollector: { id: "autoCollector", buys: 0, maxBuys: 5, baseCost: 1000 },
+  coinMultiplier: { id: "coinMultiplier", buys: 0, maxBuys: 10, baseCost: 200 },
 };
 
 const initialState: GameState = {
@@ -180,6 +198,7 @@ const initialState: GameState = {
   coins: 0,
   lifetimeCoins: 0,
   coinUpgrades: initialCoinUpgrades,
+  coinFrenzyUnlocked: false,
 };
 
 function applyDrop(
@@ -212,6 +231,12 @@ function applyDrop(
     },
     leveledUp,
   };
+}
+
+function getCoinValueMultiplier(state: GameState): number {
+  const upgradeMult = Math.pow(1.5, state.coinUpgrades.coinMultiplier.buys);
+  const rebirthMult = state.rebirthPerks.doubleCoinGain ? 2 : 1;
+  return upgradeMult * rebirthMult;
 }
 
 function reducer(
@@ -261,8 +286,8 @@ function reducer(
     }
 
     case "COLLECT_COIN": {
-      const coinMult = state.rebirthPerks.doubleCoinGain ? 2 : 1;
-      const total = action.value * coinMult;
+      const mult = getCoinValueMultiplier(state);
+      const total = Math.round(action.value * mult);
       return {
         state: {
           ...state,
@@ -286,6 +311,19 @@ function reducer(
             ...state.coinUpgrades,
             [action.id]: { ...upg, buys: upg.buys + 1 },
           },
+        },
+        leveledUp: false,
+      };
+    }
+
+    case "BUY_COIN_FRENZY": {
+      if (state.coinFrenzyUnlocked) return { state, leveledUp: false };
+      if (state.coins < COIN_FRENZY_COST) return { state, leveledUp: false };
+      return {
+        state: {
+          ...state,
+          coins: state.coins - COIN_FRENZY_COST,
+          coinFrenzyUnlocked: true,
         },
         leveledUp: false,
       };
@@ -353,6 +391,7 @@ function reducer(
     case "LOAD": {
       const loadedPerks = action.state.rebirthPerks ?? {};
       const loadedPrestige = action.state.prestigeUpgrades ?? {};
+      const loadedCoinUpgrades = action.state.coinUpgrades ?? {};
       const clampedPrestigeUpgrades = {
         ...initialPrestigeUpgrades,
         ...loadedPrestige,
@@ -366,6 +405,10 @@ function reducer(
           maxBuys: initialPrestigeUpgrades.morePP.maxBuys,
         },
       };
+      const mergedCoinUpgrades = {
+        ...initialCoinUpgrades,
+        ...loadedCoinUpgrades,
+      };
       return {
         state: {
           ...initialState,
@@ -373,6 +416,8 @@ function reducer(
           lifetimePoints: action.state.lifetimePoints ?? action.state.runPoints ?? 0,
           runPoints: action.state.runPoints ?? 0,
           prestigeUpgrades: clampedPrestigeUpgrades,
+          coinUpgrades: mergedCoinUpgrades,
+          coinFrenzyUnlocked: action.state.coinFrenzyUnlocked ?? false,
           rebirthPerks: {
             ...initialState.rebirthPerks,
             ...loadedPerks,
@@ -401,6 +446,7 @@ interface GameContextValue {
   buyPrestigeUpgrade: (id: PrestigeUpgrade["id"]) => void;
   collectCoin: (value: number) => void;
   buyCoinUpgrade: (id: CoinUpgrade["id"]) => void;
+  buyCoinFrenzy: () => void;
   prestige: () => void;
   rebirth: (which: 1 | 2 | 3 | 4 | 5) => void;
   dropAmount: number;
@@ -692,6 +738,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     (id: CoinUpgrade["id"]) => dispatch({ type: "BUY_COIN_UPGRADE", id }),
     []
   );
+  const buyCoinFrenzy = useCallback(
+    () => dispatch({ type: "BUY_COIN_FRENZY" }),
+    []
+  );
 
   const dropAmount = useMemo(() => getDropAmount(state), [state]);
   const xpAmount = useMemo(() => getXPAmount(state), [state]);
@@ -717,6 +767,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       buyPrestigeUpgrade,
       collectCoin,
       buyCoinUpgrade,
+      buyCoinFrenzy,
       prestige,
       rebirth,
       dropAmount,
@@ -744,6 +795,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       buyPrestigeUpgrade,
       collectCoin,
       buyCoinUpgrade,
+      buyCoinFrenzy,
       prestige,
       rebirth,
       dropAmount,
