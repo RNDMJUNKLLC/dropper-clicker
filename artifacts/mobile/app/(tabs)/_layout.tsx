@@ -9,7 +9,7 @@ import { useGame } from "@/context/GameContext";
 export default function TabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
-  const { coinsUnlocked } = useGame();
+  const { bonusesUnlocked } = useGame();
 
   return (
     <Tabs
@@ -51,15 +51,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="coins"
         options={{
-          title: "Coins",
+          title: "Bonuses",
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons
-              name={coinsUnlocked ? "circle-multiple" : "lock"}
+              name={bonusesUnlocked ? "star-four-points" : "lock"}
               size={24}
-              color={coinsUnlocked ? color : Colors.textDim}
+              color={bonusesUnlocked ? color : Colors.textDim}
             />
           ),
-          tabBarLabelStyle: coinsUnlocked ? {} : { color: Colors.textDim },
+          tabBarLabelStyle: bonusesUnlocked ? {} : { color: Colors.textDim },
         }}
       />
       <Tabs.Screen

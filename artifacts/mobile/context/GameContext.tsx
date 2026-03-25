@@ -11,10 +11,20 @@ import React, {
 } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import { useAuth } from "@/lib/auth";
-import { fetchCloudSave, pushCloudSave, type CloudSyncStatus, type FetchResult } from "@/lib/cloudSync";
+import {
+  fetchCloudSave,
+  pushCloudSave,
+  type CloudSyncStatus,
+} from "@/lib/cloudSync";
+import {
+  UPGRADE_TREE,
+  getTreeMultiplier,
+  isNodeAvailable,
+  type TreeCurrency,
+} from "@/constants/upgradeTree";
 
 export interface DropUpgrade {
-  id: "dropAmount" | "dropXP" | "dropTimer";
+  id: "dropAmount" | "dropXP" | "rapidDrop";
   buys: number;
   maxBuys: number;
   baseCost: number;
@@ -28,11 +38,13 @@ export interface PrestigeUpgrade {
 }
 
 export interface CoinUpgrade {
-  id: "coinMagnet" | "luckyDrops" | "coinRush" | "pointSurge" | "xpSurge" | "autoCollector" | "coinMultiplier";
+  id: "moreCash" | "moreXP" | "fasterSpawn";
   buys: number;
   maxBuys: number;
   baseCost: number;
 }
+
+export type ReadingUpgradeId = "morePoints" | "moreXP" | "moreRP";
 
 export interface GameState {
   points: number;
@@ -43,20 +55,11 @@ export interface GameState {
   level: number;
   prestigePoints: number;
   rebirthCount: number;
-  rebirthPerks: {
-    autoBuyUpgrades: boolean;
-    bonusMult: boolean;
-    autoBuyPrestigeUpgrades: boolean;
-    doubleCoinGain: boolean;
-    pointTreeUnlocked: boolean;
-    tripleMult: boolean;
-    autoBuyPointTree: boolean;
-    diamondsUnlocked: boolean;
-  };
+  rebirthTier: number;
   dropUpgrades: {
     dropAmount: DropUpgrade;
     dropXP: DropUpgrade;
-    dropTimer: DropUpgrade;
+    rapidDrop: DropUpgrade;
   };
   prestigeUpgrades: {
     morePoints: PrestigeUpgrade;
@@ -66,15 +69,20 @@ export interface GameState {
   coins: number;
   lifetimeCoins: number;
   coinUpgrades: {
-    coinMagnet: CoinUpgrade;
-    luckyDrops: CoinUpgrade;
-    coinRush: CoinUpgrade;
-    pointSurge: CoinUpgrade;
-    xpSurge: CoinUpgrade;
-    autoCollector: CoinUpgrade;
-    coinMultiplier: CoinUpgrade;
+    moreCash: CoinUpgrade;
+    moreXP: CoinUpgrade;
+    fasterSpawn: CoinUpgrade;
   };
-  coinFrenzyUnlocked: boolean;
+  purchasedTreeNodes: string[];
+  reading: {
+    books: number;
+    readingPoints: number;
+    upgrades: {
+      morePoints: number;
+      moreXP: number;
+      moreRP: number;
+    };
+  };
 }
 
 type Action =
@@ -83,7 +91,10 @@ type Action =
   | { type: "BUY_PRESTIGE_UPGRADE"; id: PrestigeUpgrade["id"] }
   | { type: "COLLECT_COIN"; value: number }
   | { type: "BUY_COIN_UPGRADE"; id: CoinUpgrade["id"] }
-  | { type: "BUY_COIN_FRENZY" }
+  | { type: "BUY_TREE_NODE"; nodeId: string }
+  | { type: "BUY_BOOK" }
+  | { type: "INVEST_READING"; category: ReadingUpgradeId; amount: number }
+  | { type: "TICK_READING" }
   | { type: "PRESTIGE" }
   | { type: "REBIRTH"; which: 1 | 2 | 3 | 4 | 5 }
   | { type: "LOAD"; state: GameState };
@@ -92,16 +103,23 @@ const XP_BASE = 100;
 const XP_SCALE = 3.5;
 const DROP_COST_SCALE = 1.14;
 const PRESTIGE_COST_SCALE = 1.5;
-const COIN_COST_SCALE = 1.3;
-const BOOSTER_COST_SCALE = 2.0;
-const COIN_FRENZY_COST = 2000;
+const CLICK_COOLDOWN_BASE = 2000;
+const CLICK_COOLDOWN_REDUCTION = 300;
+const CLICK_COOLDOWN_MIN = 500;
+
+const REBIRTH_THRESHOLDS = [0, 1e15, 2.5e16, 5e17, 2.5e19, 1e21];
+const REBIRTH_MIN_LEVEL = 10;
 
 export function xpForLevel(level: number): number {
   return XP_BASE * Math.pow(XP_SCALE, level - 1);
 }
 
-export function getLevelMultiplier(level: number): number {
-  return Math.pow(2, level - 1);
+export function getLevelPointsMult(level: number): number {
+  return 1 + (level - 1) * 2.5;
+}
+
+export function getLevelXPMult(level: number): number {
+  return 1 + (level - 1) * 0.5;
 }
 
 export function dropUpgradeCost(upgrade: DropUpgrade): number {
@@ -112,66 +130,186 @@ export function prestigeUpgradeCost(upgrade: PrestigeUpgrade): number {
   return upgrade.baseCost * Math.pow(PRESTIGE_COST_SCALE, upgrade.buys);
 }
 
-export function calcPrestigePoints(currentPoints: number): number {
-  return Math.pow(currentPoints / 1_000_000, 0.43);
+export function getEffectivePrestigeMaxBuys(
+  baseMax: number,
+  tier2: boolean
+): number {
+  return tier2 ? baseMax + 25 : baseMax;
 }
 
-const BOOSTER_IDS: CoinUpgrade["id"][] = ["pointSurge", "xpSurge", "autoCollector", "coinMultiplier"];
+export function calcPrestigePoints(currentPoints: number): number {
+  return Math.floor(currentPoints / 1000);
+}
 
 export function coinUpgradeCost(upgrade: CoinUpgrade): number {
-  const scale = BOOSTER_IDS.includes(upgrade.id) ? BOOSTER_COST_SCALE : COIN_COST_SCALE;
+  const scale = upgrade.id === "fasterSpawn" ? 3 : 5;
   return Math.ceil(upgrade.baseCost * Math.pow(scale, upgrade.buys));
 }
 
-export { COIN_FRENZY_COST };
+export function getClickCooldownMs(state: GameState): number {
+  const reduction = state.dropUpgrades.rapidDrop.buys * CLICK_COOLDOWN_REDUCTION;
+  return Math.max(CLICK_COOLDOWN_MIN, CLICK_COOLDOWN_BASE - reduction);
+}
 
 function getDropAmount(state: GameState): number {
   const baseAmount = 1 + state.dropUpgrades.dropAmount.buys;
+  const levelMult = getLevelPointsMult(state.level);
   const prestigeMult = Math.pow(2, state.prestigeUpgrades.morePoints.buys);
-  const rebirthMult = state.rebirthPerks.tripleMult ? 3 : 1;
-  const levelMult = getLevelMultiplier(state.level);
-  const coinBoost = Math.pow(2, state.coinUpgrades.pointSurge.buys);
-  return baseAmount * prestigeMult * rebirthMult * levelMult * coinBoost;
+  const coinUpgMult = Math.pow(2, state.coinUpgrades.moreCash.buys);
+  const treePtsMult = getTreeMultiplier("pointsMult", state.purchasedTreeNodes);
+  const readingMult = 1 + state.reading.upgrades.morePoints * 0.05;
+  const rebirthStatMult =
+    state.rebirthTier >= 1 ? Math.pow(2, state.rebirthCount) : 1;
+
+  let ppBoost = 1;
+  if (state.purchasedTreeNodes.includes("r6_pointsBoost")) {
+    ppBoost = 1 + (state.prestigePoints / 1e9) * 0.1;
+  }
+
+  return Math.floor(
+    baseAmount *
+      levelMult *
+      prestigeMult *
+      coinUpgMult *
+      treePtsMult *
+      readingMult *
+      rebirthStatMult *
+      ppBoost
+  );
 }
 
 function getXPAmount(state: GameState): number {
-  const baseXP = 1 + 0.5 * state.dropUpgrades.dropXP.buys;
+  const baseXP = 1 + state.dropUpgrades.dropXP.buys;
+  const levelMult = getLevelXPMult(state.level);
   const prestigeMult = Math.pow(2, state.prestigeUpgrades.moreXP.buys);
-  const r2Mult = state.rebirthPerks.bonusMult ? 2 : 1;
-  const r4Mult = state.rebirthPerks.tripleMult ? 3 : 1;
-  const coinBoost = Math.pow(2, state.coinUpgrades.xpSurge.buys);
-  return baseXP * prestigeMult * r2Mult * r4Mult * coinBoost;
+  const coinUpgMult = Math.pow(2, state.coinUpgrades.moreXP.buys);
+  const treeXPMult = getTreeMultiplier("xpMult", state.purchasedTreeNodes);
+  const readingMult = 1 + state.reading.upgrades.moreXP * 0.18;
+  const rebirthStatMult =
+    state.rebirthTier >= 1 ? Math.pow(2, state.rebirthCount) : 1;
+
+  let coinsBoost = 1;
+  if (state.purchasedTreeNodes.includes("r9_xpBoost")) {
+    coinsBoost = 1 + (state.coins / 1e9) * 0.1;
+  }
+
+  return Math.floor(
+    baseXP *
+      levelMult *
+      prestigeMult *
+      coinUpgMult *
+      treeXPMult *
+      readingMult *
+      rebirthStatMult *
+      coinsBoost
+  );
 }
 
-function getDropTimer(state: GameState): number {
-  const reduction = state.dropUpgrades.dropTimer.buys * 0.5;
-  return Math.max(0.1, 2.0 - reduction);
+function getCoinValueMultiplier(state: GameState): number {
+  let treeMult = 1;
+  for (const node of UPGRADE_TREE) {
+    if (!state.purchasedTreeNodes.includes(node.id)) continue;
+    if (node.effectType === "coinsMult") treeMult *= node.effectValue;
+    if (node.effectType === "unlockReading") treeMult *= node.effectValue;
+  }
+  const rebirthMult = state.rebirthTier >= 1 ? 3 : 1;
+  return treeMult * rebirthMult;
 }
 
-export function getDropTimerMs(state: GameState): number {
-  return Math.round(getDropTimer(state) * 1000);
+export function getCoinSpawnIntervalMs(state: GameState): number {
+  const base = 2000;
+  const reduction = state.coinUpgrades.fasterSpawn.buys * 200;
+  const treeFaster = state.purchasedTreeNodes.includes("r5_fasterSpawn");
+  const interval = base - reduction;
+  const adjusted = treeFaster ? interval / 2 : interval;
+  return Math.max(500, Math.round(adjusted));
+}
+
+export function getCoinSpawnCap(state: GameState): number {
+  return 10 + (state.purchasedTreeNodes.includes("r5_spawnCap") ? 10 : 0);
+}
+
+export function getCoinSpawnBulk(state: GameState): number {
+  return 1 + (state.purchasedTreeNodes.includes("r5_spawnBulk") ? 1 : 0);
+}
+
+export function getReadingPointsPerSec(state: GameState): number {
+  const readingUnlocked = state.purchasedTreeNodes.includes("r7_unlockReading");
+  if (!readingUnlocked || state.reading.books === 0) return 0;
+  const baseRP = state.reading.books;
+  const upgMult = 1 + state.reading.upgrades.moreRP * 0.1;
+  const treeMult = getTreeMultiplier(
+    "readingPointsMult",
+    state.purchasedTreeNodes
+  );
+  const rebirthMult = state.rebirthTier >= 2 ? 3 : 1;
+  return baseRP * upgMult * treeMult * rebirthMult;
+}
+
+export function getBookCost(state: GameState): number {
+  const cheaperBooks = state.purchasedTreeNodes.includes("r9_cheaperBooks");
+  const scaleFactor = cheaperBooks ? 1.05 : 1.1;
+  return Math.ceil(10000 * Math.pow(scaleFactor, state.reading.books));
+}
+
+function getCurrencyAmount(state: GameState, currency: TreeCurrency): number {
+  switch (currency) {
+    case "points":
+      return state.points;
+    case "prestigePoints":
+      return state.prestigePoints;
+    case "coins":
+      return state.coins;
+    case "readingPoints":
+      return state.reading.readingPoints;
+  }
+}
+
+function deductCurrency(
+  state: GameState,
+  currency: TreeCurrency,
+  amount: number
+): GameState {
+  switch (currency) {
+    case "points":
+      return { ...state, points: state.points - amount };
+    case "prestigePoints":
+      return { ...state, prestigePoints: state.prestigePoints - amount };
+    case "coins":
+      return { ...state, coins: state.coins - amount };
+    case "readingPoints":
+      return {
+        ...state,
+        reading: {
+          ...state.reading,
+          readingPoints: state.reading.readingPoints - amount,
+        },
+      };
+  }
 }
 
 const initialDropUpgrades: GameState["dropUpgrades"] = {
   dropAmount: { id: "dropAmount", buys: 0, maxBuys: 100, baseCost: 10 },
   dropXP: { id: "dropXP", buys: 0, maxBuys: 100, baseCost: 50 },
-  dropTimer: { id: "dropTimer", buys: 0, maxBuys: 5, baseCost: 100 },
+  rapidDrop: { id: "rapidDrop", buys: 0, maxBuys: 4, baseCost: 100 },
 };
 
 const initialPrestigeUpgrades: GameState["prestigeUpgrades"] = {
-  morePoints: { id: "morePoints", buys: 0, maxBuys: 100, baseCost: 1 },
-  moreXP: { id: "moreXP", buys: 0, maxBuys: 100, baseCost: 2 },
-  morePP: { id: "morePP", buys: 0, maxBuys: 15, baseCost: 10 },
+  morePoints: { id: "morePoints", buys: 0, maxBuys: 10, baseCost: 1 },
+  moreXP: { id: "moreXP", buys: 0, maxBuys: 10, baseCost: 2 },
+  morePP: { id: "morePP", buys: 0, maxBuys: 10, baseCost: 10 },
 };
 
 const initialCoinUpgrades: GameState["coinUpgrades"] = {
-  coinMagnet: { id: "coinMagnet", buys: 0, maxBuys: 10, baseCost: 10 },
-  luckyDrops: { id: "luckyDrops", buys: 0, maxBuys: 10, baseCost: 25 },
-  coinRush: { id: "coinRush", buys: 0, maxBuys: 10, baseCost: 50 },
-  pointSurge: { id: "pointSurge", buys: 0, maxBuys: 10, baseCost: 500 },
-  xpSurge: { id: "xpSurge", buys: 0, maxBuys: 10, baseCost: 750 },
-  autoCollector: { id: "autoCollector", buys: 0, maxBuys: 5, baseCost: 1000 },
-  coinMultiplier: { id: "coinMultiplier", buys: 0, maxBuys: 10, baseCost: 200 },
+  moreCash: { id: "moreCash", buys: 0, maxBuys: 10, baseCost: 5 },
+  moreXP: { id: "moreXP", buys: 0, maxBuys: 10, baseCost: 5 },
+  fasterSpawn: { id: "fasterSpawn", buys: 0, maxBuys: 4, baseCost: 15 },
+};
+
+const initialReading: GameState["reading"] = {
+  books: 0,
+  readingPoints: 0,
+  upgrades: { morePoints: 0, moreXP: 0, moreRP: 0 },
 };
 
 const initialState: GameState = {
@@ -183,22 +321,14 @@ const initialState: GameState = {
   level: 1,
   prestigePoints: 0,
   rebirthCount: 0,
-  rebirthPerks: {
-    autoBuyUpgrades: false,
-    bonusMult: false,
-    autoBuyPrestigeUpgrades: false,
-    doubleCoinGain: false,
-    pointTreeUnlocked: false,
-    tripleMult: false,
-    autoBuyPointTree: false,
-    diamondsUnlocked: false,
-  },
+  rebirthTier: 0,
   dropUpgrades: initialDropUpgrades,
   prestigeUpgrades: initialPrestigeUpgrades,
   coins: 0,
   lifetimeCoins: 0,
   coinUpgrades: initialCoinUpgrades,
-  coinFrenzyUnlocked: false,
+  purchasedTreeNodes: [],
+  reading: initialReading,
 };
 
 function applyDrop(
@@ -233,12 +363,6 @@ function applyDrop(
   };
 }
 
-function getCoinValueMultiplier(state: GameState): number {
-  const upgradeMult = Math.pow(1.5, state.coinUpgrades.coinMultiplier.buys);
-  const rebirthMult = state.rebirthPerks.doubleCoinGain ? 2 : 1;
-  return upgradeMult * rebirthMult;
-}
-
 function reducer(
   state: GameState,
   action: Action
@@ -269,7 +393,11 @@ function reducer(
 
     case "BUY_PRESTIGE_UPGRADE": {
       const upg = state.prestigeUpgrades[action.id];
-      if (upg.buys >= upg.maxBuys) return { state, leveledUp: false };
+      const effectiveMax = getEffectivePrestigeMaxBuys(
+        upg.maxBuys,
+        state.rebirthTier >= 2
+      );
+      if (upg.buys >= effectiveMax) return { state, leveledUp: false };
       const cost = prestigeUpgradeCost(upg);
       if (state.prestigePoints < cost) return { state, leveledUp: false };
       return {
@@ -316,27 +444,103 @@ function reducer(
       };
     }
 
-    case "BUY_COIN_FRENZY": {
-      if (state.coinFrenzyUnlocked) return { state, leveledUp: false };
-      if (state.coins < COIN_FRENZY_COST) return { state, leveledUp: false };
+    case "BUY_TREE_NODE": {
+      const node = UPGRADE_TREE.find((n) => n.id === action.nodeId);
+      if (!node) return { state, leveledUp: false };
+      if (state.purchasedTreeNodes.includes(node.id))
+        return { state, leveledUp: false };
+      if (
+        !isNodeAvailable(
+          node,
+          state.purchasedTreeNodes,
+          state.rebirthTier,
+          state.level
+        )
+      )
+        return { state, leveledUp: false };
+      const currentAmount = getCurrencyAmount(state, node.currency);
+      if (currentAmount < node.cost) return { state, leveledUp: false };
+      const deducted = deductCurrency(state, node.currency, node.cost);
+      return {
+        state: {
+          ...deducted,
+          purchasedTreeNodes: [...state.purchasedTreeNodes, node.id],
+        },
+        leveledUp: false,
+      };
+    }
+
+    case "BUY_BOOK": {
+      const cost = getBookCost(state);
+      if (state.coins < cost) return { state, leveledUp: false };
       return {
         state: {
           ...state,
-          coins: state.coins - COIN_FRENZY_COST,
-          coinFrenzyUnlocked: true,
+          coins: state.coins - cost,
+          reading: {
+            ...state.reading,
+            books: state.reading.books + 1,
+          },
+        },
+        leveledUp: false,
+      };
+    }
+
+    case "INVEST_READING": {
+      const { category, amount } = action;
+      if (amount <= 0) return { state, leveledUp: false };
+      if (state.reading.readingPoints < amount)
+        return { state, leveledUp: false };
+      return {
+        state: {
+          ...state,
+          reading: {
+            ...state.reading,
+            readingPoints: state.reading.readingPoints - amount,
+            upgrades: {
+              ...state.reading.upgrades,
+              [category]: state.reading.upgrades[category] + amount,
+            },
+          },
+        },
+        leveledUp: false,
+      };
+    }
+
+    case "TICK_READING": {
+      const rpPerSec = getReadingPointsPerSec(state);
+      if (rpPerSec <= 0) return { state, leveledUp: false };
+      return {
+        state: {
+          ...state,
+          reading: {
+            ...state.reading,
+            readingPoints: state.reading.readingPoints + rpPerSec,
+          },
         },
         leveledUp: false,
       };
     }
 
     case "PRESTIGE": {
-      if (state.points < 1_000_000) return { state, leveledUp: false };
-      const rawEarned = calcPrestigePoints(state.points);
-      const ppGainMult =
+      if (state.points < 1000) return { state, leveledUp: false };
+      const ppGain = calcPrestigePoints(state.points);
+      const ppMult =
         Math.pow(2, state.prestigeUpgrades.morePP.buys) *
-        (state.rebirthPerks.bonusMult ? 2 : 1) *
-        (state.rebirthPerks.tripleMult ? 3 : 1);
-      const bonusPP = rawEarned * ppGainMult;
+        (state.rebirthTier >= 1 ? Math.pow(2, state.rebirthCount) : 1);
+      const totalPP = ppGain * ppMult;
+
+      if (state.rebirthTier >= 2) {
+        return {
+          state: {
+            ...state,
+            points: 0,
+            prestigePoints: state.prestigePoints + totalPP,
+          },
+          leveledUp: false,
+        };
+      }
+
       return {
         state: {
           ...state,
@@ -345,7 +549,7 @@ function reducer(
           totalDrops: 0,
           xp: 0,
           level: 1,
-          prestigePoints: state.prestigePoints + bonusPP,
+          prestigePoints: state.prestigePoints + totalPP,
           dropUpgrades: { ...initialDropUpgrades },
         },
         leveledUp: false,
@@ -354,74 +558,153 @@ function reducer(
 
     case "REBIRTH": {
       const { which } = action;
-
-      if (which === 1 && state.runPoints < 1e25) return { state, leveledUp: false };
-      if (which === 2 && (state.runPoints < 1e50 || state.rebirthCount < 1))
+      const threshold = REBIRTH_THRESHOLDS[which];
+      if (state.points < threshold) return { state, leveledUp: false };
+      if (state.level < REBIRTH_MIN_LEVEL) return { state, leveledUp: false };
+      if (which > 1 && state.rebirthTier < which - 1)
         return { state, leveledUp: false };
-      if (which === 3 && (state.runPoints < 1e75 || state.rebirthCount < 2))
-        return { state, leveledUp: false };
-      if (which === 4 && (state.runPoints < 1e100 || state.rebirthCount < 3))
-        return { state, leveledUp: false };
-      if (which === 5 && (state.runPoints < 1e150 || state.rebirthCount < 4))
-        return { state, leveledUp: false };
-
-      const newRebirthCount = state.rebirthCount + 1;
-      const newPerks = {
-        autoBuyUpgrades: state.rebirthPerks.autoBuyUpgrades || which === 1,
-        bonusMult: state.rebirthPerks.bonusMult || which === 2,
-        autoBuyPrestigeUpgrades: state.rebirthPerks.autoBuyPrestigeUpgrades || which === 3,
-        doubleCoinGain: state.rebirthPerks.doubleCoinGain || which === 3,
-        pointTreeUnlocked: state.rebirthPerks.pointTreeUnlocked || which === 3,
-        tripleMult: state.rebirthPerks.tripleMult || which === 4,
-        autoBuyPointTree: state.rebirthPerks.autoBuyPointTree || which === 5,
-        diamondsUnlocked: state.rebirthPerks.diamondsUnlocked || which === 5,
-      };
 
       return {
         state: {
-          ...initialState,
-          lifetimePoints: state.lifetimePoints,
-          rebirthCount: newRebirthCount,
-          rebirthPerks: newPerks,
+          ...state,
+          points: 0,
+          runPoints: 0,
+          xp: 0,
+          level: 1,
+          totalDrops: 0,
+          prestigePoints: 0,
+          dropUpgrades: { ...initialDropUpgrades },
+          prestigeUpgrades: { ...initialPrestigeUpgrades },
+          rebirthCount: state.rebirthCount + 1,
+          rebirthTier: Math.max(state.rebirthTier, which),
         },
         leveledUp: false,
       };
     }
 
     case "LOAD": {
-      const loadedPerks = action.state.rebirthPerks ?? {};
-      const loadedPrestige = action.state.prestigeUpgrades ?? {};
-      const loadedCoinUpgrades = action.state.coinUpgrades ?? {};
-      const clampedPrestigeUpgrades = {
-        ...initialPrestigeUpgrades,
-        ...loadedPrestige,
+      const s = action.state as any;
+
+      let rebirthTier = s.rebirthTier ?? 0;
+      if (rebirthTier === 0 && s.rebirthPerks) {
+        const rp = s.rebirthPerks;
+        if (rp.diamondsUnlocked) rebirthTier = 5;
+        else if (rp.tripleMult) rebirthTier = 4;
+        else if (rp.autoBuyPrestigeUpgrades) rebirthTier = 3;
+        else if (rp.bonusMult) rebirthTier = 2;
+        else if (rp.autoBuyUpgrades) rebirthTier = 1;
+      }
+
+      const loadedDrop = s.dropUpgrades ?? {};
+      const mergedDrop: GameState["dropUpgrades"] = {
+        dropAmount: {
+          ...initialDropUpgrades.dropAmount,
+          ...(loadedDrop.dropAmount ?? {}),
+        },
+        dropXP: {
+          ...initialDropUpgrades.dropXP,
+          ...(loadedDrop.dropXP ?? {}),
+        },
+        rapidDrop: {
+          ...initialDropUpgrades.rapidDrop,
+          ...(loadedDrop.rapidDrop ?? loadedDrop.dropTimer ?? {}),
+          id: "rapidDrop",
+          maxBuys: initialDropUpgrades.rapidDrop.maxBuys,
+          buys: Math.min(
+            (loadedDrop.rapidDrop ?? loadedDrop.dropTimer ?? {}).buys ?? 0,
+            initialDropUpgrades.rapidDrop.maxBuys
+          ),
+        },
+      };
+
+      const loadedPrestige = s.prestigeUpgrades ?? {};
+      const mergedPrestige: GameState["prestigeUpgrades"] = {
+        morePoints: {
+          ...initialPrestigeUpgrades.morePoints,
+          ...(loadedPrestige.morePoints ?? {}),
+          maxBuys: initialPrestigeUpgrades.morePoints.maxBuys,
+          buys: Math.min(
+            loadedPrestige.morePoints?.buys ?? 0,
+            initialPrestigeUpgrades.morePoints.maxBuys
+          ),
+        },
+        moreXP: {
+          ...initialPrestigeUpgrades.moreXP,
+          ...(loadedPrestige.moreXP ?? {}),
+          maxBuys: initialPrestigeUpgrades.moreXP.maxBuys,
+          buys: Math.min(
+            loadedPrestige.moreXP?.buys ?? 0,
+            initialPrestigeUpgrades.moreXP.maxBuys
+          ),
+        },
         morePP: {
           ...initialPrestigeUpgrades.morePP,
           ...(loadedPrestige.morePP ?? {}),
+          maxBuys: initialPrestigeUpgrades.morePP.maxBuys,
           buys: Math.min(
             loadedPrestige.morePP?.buys ?? 0,
             initialPrestigeUpgrades.morePP.maxBuys
           ),
-          maxBuys: initialPrestigeUpgrades.morePP.maxBuys,
         },
       };
-      const mergedCoinUpgrades = {
-        ...initialCoinUpgrades,
-        ...loadedCoinUpgrades,
+
+      const loadedCoinUpg = s.coinUpgrades ?? {} as any;
+      const oldPointSurge = loadedCoinUpg.pointSurge ?? loadedCoinUpg.moreCash;
+      const oldXpSurge = loadedCoinUpg.xpSurge ?? loadedCoinUpg.moreXP;
+      const oldCoinRush = loadedCoinUpg.coinRush ?? loadedCoinUpg.fasterSpawn;
+      const mergedCoinUpg: GameState["coinUpgrades"] = {
+        moreCash: {
+          ...initialCoinUpgrades.moreCash,
+          buys: Math.min(
+            oldPointSurge?.buys ?? 0,
+            initialCoinUpgrades.moreCash.maxBuys
+          ),
+        },
+        moreXP: {
+          ...initialCoinUpgrades.moreXP,
+          buys: Math.min(
+            oldXpSurge?.buys ?? 0,
+            initialCoinUpgrades.moreXP.maxBuys
+          ),
+        },
+        fasterSpawn: {
+          ...initialCoinUpgrades.fasterSpawn,
+          buys: Math.min(
+            oldCoinRush?.buys ?? 0,
+            initialCoinUpgrades.fasterSpawn.maxBuys
+          ),
+        },
       };
+
+      const loadedReading = s.reading ?? {};
+      const mergedReading: GameState["reading"] = {
+        books: loadedReading.books ?? 0,
+        readingPoints: loadedReading.readingPoints ?? 0,
+        upgrades: {
+          ...initialReading.upgrades,
+          ...(loadedReading.upgrades ?? {}),
+        },
+      };
+
       return {
         state: {
           ...initialState,
-          ...action.state,
-          lifetimePoints: action.state.lifetimePoints ?? action.state.runPoints ?? 0,
-          runPoints: action.state.runPoints ?? 0,
-          prestigeUpgrades: clampedPrestigeUpgrades,
-          coinUpgrades: mergedCoinUpgrades,
-          coinFrenzyUnlocked: action.state.coinFrenzyUnlocked ?? false,
-          rebirthPerks: {
-            ...initialState.rebirthPerks,
-            ...loadedPerks,
-          },
+          points: s.points ?? 0,
+          runPoints: s.runPoints ?? 0,
+          lifetimePoints: s.lifetimePoints ?? s.runPoints ?? 0,
+          totalDrops: s.totalDrops ?? 0,
+          xp: s.xp ?? 0,
+          level: s.level ?? 1,
+          prestigePoints: s.prestigePoints ?? 0,
+          rebirthCount: s.rebirthCount ?? 0,
+          rebirthTier,
+          dropUpgrades: mergedDrop,
+          prestigeUpgrades: mergedPrestige,
+          coins: s.coins ?? 0,
+          lifetimeCoins: s.lifetimeCoins ?? 0,
+          coinUpgrades: mergedCoinUpg,
+          purchasedTreeNodes: s.purchasedTreeNodes ?? [],
+          reading: mergedReading,
         },
         leveledUp: false,
       };
@@ -446,15 +729,24 @@ interface GameContextValue {
   buyPrestigeUpgrade: (id: PrestigeUpgrade["id"]) => void;
   collectCoin: (value: number) => void;
   buyCoinUpgrade: (id: CoinUpgrade["id"]) => void;
-  buyCoinFrenzy: () => void;
+  buyTreeNode: (nodeId: string) => void;
+  buyBook: () => void;
+  investReading: (category: ReadingUpgradeId, amount: number) => void;
   prestige: () => void;
   rebirth: (which: 1 | 2 | 3 | 4 | 5) => void;
   dropAmount: number;
   xpAmount: number;
-  dropTimerMs: number;
+  clickCooldownMs: number;
   xpProgress: number;
   xpRequired: number;
-  levelMultiplier: number;
+  levelPointsMult: number;
+  levelXPMult: number;
+  coinSpawnIntervalMs: number;
+  coinSpawnCap: number;
+  coinSpawnBulk: number;
+  readingPointsPerSec: number;
+  bookCost: number;
+  readingUnlocked: boolean;
   canPrestige: boolean;
   canRebirth1: boolean;
   canRebirth2: boolean;
@@ -462,8 +754,9 @@ interface GameContextValue {
   canRebirth4: boolean;
   canRebirth5: boolean;
   showUpgrades: boolean;
-  coinsUnlocked: boolean;
-  pointTreeUnlocked: boolean;
+  bonusesUnlocked: boolean;
+  treeUnlocked: boolean;
+  showRebirthSection: boolean;
   leveledUp: boolean;
   cloudSyncStatus: CloudSyncStatus;
 }
@@ -479,13 +772,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   });
 
   const { state } = combined;
-  const { isAuthenticated, user } = useAuth();
-  const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>("idle");
+  const { isAuthenticated } = useAuth();
+  const [cloudSyncStatus, setCloudSyncStatus] =
+    useState<CloudSyncStatus>("idle");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cloudSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autoBuyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const autoBuyPrestigeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const autoDropTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const readingTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [localLoaded, setLocalLoaded] = useState(false);
   const cloudSyncedRef = useRef(false);
   const pendingCloudSaveRef = useRef(false);
@@ -519,7 +811,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const doCloudSave = useCallback(async () => {
     if (!isAuthenticated) return;
     const currentState = stateRef.current;
-    if (currentState.lifetimePoints === 0 && currentState.totalDrops === 0) return;
+    if (currentState.lifetimePoints === 0 && currentState.totalDrops === 0)
+      return;
 
     setCloudSyncStatus("syncing");
     const result = await pushCloudSave(currentState);
@@ -554,7 +847,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       if (result.status === "empty") {
         setCloudSyncStatus("idle");
-        if (stateRef.current.lifetimePoints > 0 || stateRef.current.totalDrops > 0) {
+        if (
+          stateRef.current.lifetimePoints > 0 ||
+          stateRef.current.totalDrops > 0
+        ) {
           doCloudSave();
         }
         return;
@@ -594,13 +890,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         cloudSyncedRef.current = true;
         if (retryResult.status === "found") {
           const localLP = stateRef.current.lifetimePoints ?? 0;
-          const cloudLP = (retryResult.gameState.lifetimePoints as number) ?? 0;
+          const cloudLP =
+            (retryResult.gameState.lifetimePoints as number) ?? 0;
           if (cloudLP > localLP) {
             dispatch({ type: "LOAD", state: retryResult.gameState });
-            AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(retryResult.gameState));
+            AsyncStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify(retryResult.gameState)
+            );
             setCloudSyncStatus("saved");
             setTimeout(() => {
-              setCloudSyncStatus((prev) => (prev === "saved" ? "idle" : prev));
+              setCloudSyncStatus((prev) =>
+                prev === "saved" ? "idle" : prev
+              );
             }, 3000);
             return;
           }
@@ -609,7 +911,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (pendingCloudSaveRef.current || Date.now() - lastCloudSaveRef.current >= CLOUD_SYNC_INTERVAL) {
+      if (
+        pendingCloudSaveRef.current ||
+        Date.now() - lastCloudSaveRef.current >= CLOUD_SYNC_INTERVAL
+      ) {
         doCloudSave();
       }
     }, CLOUD_SYNC_INTERVAL);
@@ -621,12 +926,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-
-    const markDirty = () => {
-      pendingCloudSaveRef.current = true;
-    };
-
-    markDirty();
+    pendingCloudSaveRef.current = true;
   }, [state, isAuthenticated]);
 
   useEffect(() => {
@@ -645,7 +945,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
 
     const sub = AppState.addEventListener("change", handleAppState);
-
     return () => {
       sub.remove();
       flushSave();
@@ -653,67 +952,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, doCloudSave]);
 
   useEffect(() => {
-    if (autoDropTimerRef.current) clearInterval(autoDropTimerRef.current);
-    const ms = getDropTimerMs(state);
-    autoDropTimerRef.current = setInterval(() => {
-      dispatch({ type: "DROP" });
-    }, ms);
+    if (readingTickRef.current) clearInterval(readingTickRef.current);
+    readingTickRef.current = setInterval(() => {
+      dispatch({ type: "TICK_READING" });
+    }, 1000);
     return () => {
-      if (autoDropTimerRef.current) clearInterval(autoDropTimerRef.current);
+      if (readingTickRef.current) clearInterval(readingTickRef.current);
     };
-  }, [state.dropUpgrades.dropTimer.buys]);
-
-  useEffect(() => {
-    if (autoBuyTimerRef.current) clearInterval(autoBuyTimerRef.current);
-    if (!state.rebirthPerks.autoBuyUpgrades) return;
-    autoBuyTimerRef.current = setInterval(() => {
-      const s = stateRef.current;
-      const ids: DropUpgrade["id"][] = ["dropAmount", "dropXP", "dropTimer"];
-      let cheapestId: DropUpgrade["id"] | null = null;
-      let cheapestCost = Infinity;
-      for (const id of ids) {
-        const upg = s.dropUpgrades[id];
-        if (upg.buys >= upg.maxBuys) continue;
-        const cost = dropUpgradeCost(upg);
-        if (cost <= s.points && cost < cheapestCost) {
-          cheapestCost = cost;
-          cheapestId = id;
-        }
-      }
-      if (cheapestId) {
-        dispatch({ type: "BUY_DROP_UPGRADE", id: cheapestId });
-      }
-    }, 2000);
-    return () => {
-      if (autoBuyTimerRef.current) clearInterval(autoBuyTimerRef.current);
-    };
-  }, [state.rebirthPerks.autoBuyUpgrades]);
-
-  useEffect(() => {
-    if (autoBuyPrestigeTimerRef.current) clearInterval(autoBuyPrestigeTimerRef.current);
-    if (!state.rebirthPerks.autoBuyPrestigeUpgrades) return;
-    autoBuyPrestigeTimerRef.current = setInterval(() => {
-      const s = stateRef.current;
-      const ids: PrestigeUpgrade["id"][] = ["morePoints", "moreXP", "morePP"];
-      let cheapestId: PrestigeUpgrade["id"] | null = null;
-      let cheapestCost = Infinity;
-      for (const id of ids) {
-        const upg = s.prestigeUpgrades[id];
-        if (upg.buys >= upg.maxBuys) continue;
-        const cost = prestigeUpgradeCost(upg);
-        if (cost <= s.prestigePoints && cost < cheapestCost) {
-          cheapestCost = cost;
-          cheapestId = id;
-        }
-      }
-      if (cheapestId) {
-        dispatch({ type: "BUY_PRESTIGE_UPGRADE", id: cheapestId });
-      }
-    }, 2000);
-    return () => {
-      if (autoBuyPrestigeTimerRef.current) clearInterval(autoBuyPrestigeTimerRef.current);
-    };
-  }, [state.rebirthPerks.autoBuyPrestigeUpgrades]);
+  }, []);
 
   const drop = useCallback(() => dispatch({ type: "DROP" }), []);
   const buyDropUpgrade = useCallback(
@@ -725,11 +971,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "BUY_PRESTIGE_UPGRADE", id }),
     []
   );
-  const prestige = useCallback(() => dispatch({ type: "PRESTIGE" }), []);
-  const rebirth = useCallback(
-    (which: 1 | 2 | 3 | 4 | 5) => dispatch({ type: "REBIRTH", which }),
-    []
-  );
   const collectCoin = useCallback(
     (value: number) => dispatch({ type: "COLLECT_COIN", value }),
     []
@@ -738,26 +979,73 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     (id: CoinUpgrade["id"]) => dispatch({ type: "BUY_COIN_UPGRADE", id }),
     []
   );
-  const buyCoinFrenzy = useCallback(
-    () => dispatch({ type: "BUY_COIN_FRENZY" }),
+  const buyTreeNode = useCallback(
+    (nodeId: string) => dispatch({ type: "BUY_TREE_NODE", nodeId }),
+    []
+  );
+  const buyBook = useCallback(() => dispatch({ type: "BUY_BOOK" }), []);
+  const investReading = useCallback(
+    (category: ReadingUpgradeId, amount: number) =>
+      dispatch({ type: "INVEST_READING", category, amount }),
+    []
+  );
+  const prestige = useCallback(() => dispatch({ type: "PRESTIGE" }), []);
+  const rebirth = useCallback(
+    (which: 1 | 2 | 3 | 4 | 5) => dispatch({ type: "REBIRTH", which }),
     []
   );
 
   const dropAmount = useMemo(() => getDropAmount(state), [state]);
   const xpAmount = useMemo(() => getXPAmount(state), [state]);
-  const dropTimerMs = useMemo(() => getDropTimerMs(state), [state]);
+  const clickCooldownMs = useMemo(() => getClickCooldownMs(state), [state]);
   const xpRequired = useMemo(() => xpForLevel(state.level), [state.level]);
-  const levelMultiplier = useMemo(() => getLevelMultiplier(state.level), [state.level]);
+  const levelPointsMult = useMemo(
+    () => getLevelPointsMult(state.level),
+    [state.level]
+  );
+  const levelXPMult = useMemo(
+    () => getLevelXPMult(state.level),
+    [state.level]
+  );
+  const coinSpawnIntervalMs = useMemo(
+    () => getCoinSpawnIntervalMs(state),
+    [state]
+  );
+  const coinSpawnCap = useMemo(() => getCoinSpawnCap(state), [state]);
+  const coinSpawnBulk = useMemo(() => getCoinSpawnBulk(state), [state]);
+  const readingPointsPerSecVal = useMemo(
+    () => getReadingPointsPerSec(state),
+    [state]
+  );
+  const bookCostVal = useMemo(() => getBookCost(state), [state]);
   const xpProgress = state.xp / xpRequired;
-  const canPrestige = state.points >= 1_000_000;
-  const canRebirth1 = state.runPoints >= 1e25;
-  const canRebirth2 = state.runPoints >= 1e50 && state.rebirthCount >= 1;
-  const canRebirth3 = state.runPoints >= 1e75 && state.rebirthCount >= 2;
-  const canRebirth4 = state.runPoints >= 1e100 && state.rebirthCount >= 3;
-  const canRebirth5 = state.runPoints >= 1e150 && state.rebirthCount >= 4;
+  const canPrestige = state.points >= 1000;
+  const canRebirth1 =
+    state.points >= REBIRTH_THRESHOLDS[1] && state.level >= REBIRTH_MIN_LEVEL;
+  const canRebirth2 =
+    state.points >= REBIRTH_THRESHOLDS[2] &&
+    state.level >= REBIRTH_MIN_LEVEL &&
+    state.rebirthTier >= 1;
+  const canRebirth3 =
+    state.points >= REBIRTH_THRESHOLDS[3] &&
+    state.level >= REBIRTH_MIN_LEVEL &&
+    state.rebirthTier >= 2;
+  const canRebirth4 =
+    state.points >= REBIRTH_THRESHOLDS[4] &&
+    state.level >= REBIRTH_MIN_LEVEL &&
+    state.rebirthTier >= 3;
+  const canRebirth5 =
+    state.points >= REBIRTH_THRESHOLDS[5] &&
+    state.level >= REBIRTH_MIN_LEVEL &&
+    state.rebirthTier >= 4;
   const showUpgrades = state.totalDrops >= 10;
-  const coinsUnlocked = state.rebirthPerks.autoBuyUpgrades;
-  const pointTreeUnlocked = state.rebirthPerks.pointTreeUnlocked;
+  const bonusesUnlocked = state.level >= 8;
+  const treeUnlocked = state.level >= 7;
+  const readingUnlocked = state.purchasedTreeNodes.includes(
+    "r7_unlockReading"
+  );
+  const showRebirthSection =
+    state.level >= REBIRTH_MIN_LEVEL || state.rebirthCount > 0;
 
   const value = useMemo(
     () => ({
@@ -767,15 +1055,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       buyPrestigeUpgrade,
       collectCoin,
       buyCoinUpgrade,
-      buyCoinFrenzy,
+      buyTreeNode,
+      buyBook,
+      investReading,
       prestige,
       rebirth,
       dropAmount,
       xpAmount,
-      dropTimerMs,
+      clickCooldownMs,
       xpProgress,
       xpRequired,
-      levelMultiplier,
+      levelPointsMult,
+      levelXPMult,
+      coinSpawnIntervalMs,
+      coinSpawnCap,
+      coinSpawnBulk,
+      readingPointsPerSec: readingPointsPerSecVal,
+      bookCost: bookCostVal,
+      readingUnlocked,
       canPrestige,
       canRebirth1,
       canRebirth2,
@@ -783,8 +1080,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth4,
       canRebirth5,
       showUpgrades,
-      coinsUnlocked,
-      pointTreeUnlocked,
+      bonusesUnlocked,
+      treeUnlocked,
+      showRebirthSection,
       leveledUp: combined.leveledUp,
       cloudSyncStatus,
     }),
@@ -795,15 +1093,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       buyPrestigeUpgrade,
       collectCoin,
       buyCoinUpgrade,
-      buyCoinFrenzy,
+      buyTreeNode,
+      buyBook,
+      investReading,
       prestige,
       rebirth,
       dropAmount,
       xpAmount,
-      dropTimerMs,
+      clickCooldownMs,
       xpProgress,
       xpRequired,
-      levelMultiplier,
+      levelPointsMult,
+      levelXPMult,
+      coinSpawnIntervalMs,
+      coinSpawnCap,
+      coinSpawnBulk,
+      readingPointsPerSecVal,
+      bookCostVal,
+      readingUnlocked,
       canPrestige,
       canRebirth1,
       canRebirth2,
@@ -811,8 +1118,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       canRebirth4,
       canRebirth5,
       showUpgrades,
-      coinsUnlocked,
-      pointTreeUnlocked,
+      bonusesUnlocked,
+      treeUnlocked,
+      showRebirthSection,
       combined.leveledUp,
       cloudSyncStatus,
     ]

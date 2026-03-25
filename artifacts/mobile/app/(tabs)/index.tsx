@@ -64,18 +64,15 @@ export default function GameScreen() {
     buyDropUpgrade,
     dropAmount,
     xpAmount,
-    dropTimerMs,
+    clickCooldownMs,
     xpProgress,
     xpRequired,
-    levelMultiplier,
+    levelPointsMult,
+    levelXPMult,
     showUpgrades,
     canPrestige,
-    canRebirth1,
-    canRebirth2,
-    canRebirth3,
-    canRebirth4,
-    canRebirth5,
-    pointTreeUnlocked,
+    showRebirthSection,
+    treeUnlocked,
   } = useGame();
 
   const topPad = Platform.OS === "web" ? 67 : Math.max(insets.top, 20);
@@ -91,13 +88,13 @@ export default function GameScreen() {
     {
       id: "dropXP" as const,
       title: "XP Surge",
-      description: `+50% XP/drop\nCurrent: x${(1 + 0.5 * state.dropUpgrades.dropXP.buys).toFixed(2)}`,
+      description: `+1 XP/drop\nCurrent: +${1 + state.dropUpgrades.dropXP.buys}`,
       color: Colors.xp,
     },
     {
-      id: "dropTimer" as const,
+      id: "rapidDrop" as const,
       title: "Rapid Drop",
-      description: `-0.5s/upgrade\nCurrent: ${formatTime(dropTimerMs)}`,
+      description: `-0.3s cooldown\nCurrent: ${formatTime(clickCooldownMs)}`,
       color: Colors.accentDim,
     },
   ];
@@ -109,10 +106,7 @@ export default function GameScreen() {
     state.prestigeUpgrades.moreXP.buys > 0 ||
     state.prestigeUpgrades.morePP.buys > 0;
 
-  const showRebirthSection =
-    canRebirth1 || canRebirth2 || canRebirth3 || canRebirth4 || canRebirth5 || state.rebirthCount > 0;
-
-  const prestigeProgress = Math.min(state.points / 1_000_000, 1);
+  const prestigeProgress = Math.min(state.points / 1000, 1);
 
   return (
     <View style={[styles.root, { paddingTop: topPad }]}>
@@ -148,11 +142,10 @@ export default function GameScreen() {
         </View>
 
         <View style={styles.dropCenter}>
-          <DropButton onDrop={drop} dropAmount={dropAmount} />
+          <DropButton onDrop={drop} dropAmount={dropAmount} cooldownMs={clickCooldownMs} />
           <View style={styles.dropMeta}>
             <Text style={styles.dropMetaText}>
-              AUTO: {formatTime(dropTimerMs)} · +{formatNumber(dropAmount)} pts ·
-              +{formatNumber(xpAmount)} XP
+              +{formatNumber(dropAmount)} pts · +{formatNumber(xpAmount)} XP · {formatTime(clickCooldownMs)} cooldown
             </Text>
           </View>
         </View>
@@ -164,8 +157,9 @@ export default function GameScreen() {
           prestigePoints={state.prestigePoints}
           rebirthCount={state.rebirthCount}
           dropAmount={dropAmount}
-          dropTimerMs={dropTimerMs}
-          levelMultiplier={levelMultiplier}
+          clickCooldownMs={clickCooldownMs}
+          levelPointsMult={levelPointsMult}
+          levelXPMult={levelXPMult}
         />
 
         {showUpgrades && (
@@ -192,16 +186,6 @@ export default function GameScreen() {
                 );
               })}
             </View>
-            {state.rebirthPerks.autoBuyUpgrades && (
-              <View style={styles.perkChip}>
-                <Text style={styles.perkChipText}>AUTO-BUY ACTIVE</Text>
-              </View>
-            )}
-            {state.rebirthPerks.autoBuyPrestigeUpgrades && (
-              <View style={[styles.perkChip, { backgroundColor: Colors.rebirthBlue + "22", borderColor: Colors.rebirthBlue + "44" }]}>
-                <Text style={[styles.perkChipText, { color: Colors.rebirthBlue }]}>AUTO-BUY PP UPGRADES</Text>
-              </View>
-            )}
           </View>
         )}
 
@@ -214,7 +198,7 @@ export default function GameScreen() {
             <View style={styles.lockedHint}>
               <Text style={styles.lockedTitle}>PRESTIGE</Text>
               <Text style={styles.lockedText}>
-                Unlock at {formatNumber(1_000_000)} current points
+                Unlock at {formatNumber(1000)} current points
               </Text>
               <View style={styles.progressBar}>
                 <View
@@ -228,7 +212,7 @@ export default function GameScreen() {
                 />
               </View>
               <Text style={styles.lockedProgress}>
-                {formatNumber(state.points)} / {formatNumber(1_000_000)}
+                {formatNumber(state.points)} / {formatNumber(1000)}
               </Text>
             </View>
           </View>
@@ -250,42 +234,22 @@ export default function GameScreen() {
                 REBIRTH
               </Text>
               <Text style={styles.lockedText}>
-                Rebirth I requires {formatNumber(1e25)} run points
-              </Text>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${
-                        state.runPoints > 0
-                          ? Math.min(
-                              Math.log10(state.runPoints + 1) /
-                                Math.log10(1e25 + 1),
-                              1
-                            ) * 100
-                          : 0
-                      }%`,
-                      backgroundColor: Colors.rebirth,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={styles.lockedProgress}>
-                {formatNumber(state.runPoints)} / {formatNumber(1e25)}
+                Reach level {10} to unlock Rebirth
               </Text>
             </View>
           </View>
         )}
 
-        {pointTreeUnlocked && (
+        {treeUnlocked && (
           <View style={styles.section}>
             <View style={styles.pointTreePlaceholder}>
               <Text style={styles.pointTreeIcon}>🌳</Text>
-              <Text style={styles.pointTreeTitle}>POINT TREE</Text>
-              <Text style={styles.pointTreeSubtitle}>Coming Soon</Text>
+              <Text style={styles.pointTreeTitle}>UPGRADE TREE</Text>
+              <Text style={styles.pointTreeSubtitle}>
+                {state.purchasedTreeNodes.length} nodes unlocked
+              </Text>
               <Text style={styles.pointTreeDesc}>
-                Unlock permanent stat boosts that persist across all rebirths
+                Permanent stat boosts that persist across rebirths. Full tree UI coming soon.
               </Text>
             </View>
           </View>
@@ -391,23 +355,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-  },
-  perkChip: {
-    marginTop: 8,
-    backgroundColor: Colors.rebirth + "22",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: Colors.rebirth + "44",
-  },
-  perkChipText: {
-    fontSize: 10,
-    fontWeight: "700" as const,
-    color: Colors.rebirth,
-    letterSpacing: 2,
-    fontFamily: "Inter_700Bold",
   },
   lockedHint: {
     backgroundColor: Colors.bgCard,

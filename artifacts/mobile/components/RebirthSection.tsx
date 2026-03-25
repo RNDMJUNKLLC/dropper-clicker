@@ -19,11 +19,7 @@ import Colors from "@/constants/colors";
 import { useGame } from "@/context/GameContext";
 import { formatNumber } from "@/utils/format";
 
-const REBIRTH1_THRESHOLD = 1e25;
-const REBIRTH2_THRESHOLD = 1e50;
-const REBIRTH3_THRESHOLD = 1e75;
-const REBIRTH4_THRESHOLD = 1e100;
-const REBIRTH5_THRESHOLD = 1e150;
+const REBIRTH_THRESHOLDS = [0, 1e15, 2.5e16, 5e17, 2.5e19, 1e21];
 
 function ProgressBar({
   value,
@@ -53,7 +49,7 @@ function ProgressBar({
 function RebirthButton({
   label,
   threshold,
-  runPoints,
+  currentPoints,
   perks,
   color,
   active,
@@ -63,7 +59,7 @@ function RebirthButton({
 }: {
   label: string;
   threshold: number;
-  runPoints: number;
+  currentPoints: number;
   perks: string[];
   color: string;
   active: boolean;
@@ -125,14 +121,14 @@ function RebirthButton({
         </View>
 
         <View style={styles.progressSection}>
-          <ProgressBar value={runPoints} max={threshold} color={color} />
+          <ProgressBar value={currentPoints} max={threshold} color={color} />
           <Text
             style={[
               styles.progressText,
               { color: active ? color + "CC" : Colors.textDim },
             ]}
           >
-            {formatNumber(runPoints)} / {formatNumber(threshold)} run pts
+            {formatNumber(currentPoints)} / {formatNumber(threshold)} pts
             {requiresText ? ` + ${requiresText}` : ""}
           </Text>
         </View>
@@ -171,7 +167,7 @@ export default function RebirthSection() {
 
     Alert.alert(
       `Rebirth ${which}`,
-      `This resets ALL progress (points, XP, upgrades, prestige, PP, coins). Your new perks are permanently unlocked.`,
+      `This resets points, XP, level, upgrades, prestige, and PP. Coins, tree, and reading are kept. Your new perks are permanently unlocked.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -188,12 +184,6 @@ export default function RebirthSection() {
     );
   };
 
-  const r1Active = state.rebirthPerks.autoBuyUpgrades;
-  const r2Active = state.rebirthPerks.bonusMult;
-  const r3Active = state.rebirthPerks.autoBuyPrestigeUpgrades;
-  const r4Active = state.rebirthPerks.tripleMult;
-  const r5Active = state.rebirthPerks.diamondsUnlocked;
-
   return (
     <View style={styles.container}>
       <View style={styles.titleRow}>
@@ -203,65 +193,70 @@ export default function RebirthSection() {
             <Text style={styles.countText}>{state.rebirthCount}x</Text>
           </View>
         )}
+        {state.rebirthTier > 0 && (
+          <View style={[styles.countChip, { backgroundColor: Colors.rebirthPink + "33" }]}>
+            <Text style={[styles.countText, { color: Colors.rebirthPink }]}>Tier {state.rebirthTier}</Text>
+          </View>
+        )}
       </View>
 
       <RebirthButton
         label="REBIRTH I"
-        threshold={REBIRTH1_THRESHOLD}
-        runPoints={state.runPoints}
-        perks={["Auto-buy cheapest upgrade every 2s", "Unlock Coins tab"]}
+        threshold={REBIRTH_THRESHOLDS[1]}
+        currentPoints={state.points}
+        perks={["2x all stats per rebirth", "x3 coin value"]}
         color={Colors.rebirth}
         active={canRebirth1}
-        unlocked={r1Active}
+        unlocked={state.rebirthTier >= 1}
         onPress={() => handleRebirth(1)}
       />
 
       <RebirthButton
         label="REBIRTH II"
-        threshold={REBIRTH2_THRESHOLD}
-        runPoints={state.runPoints}
-        perks={["2x XP gain", "2x PP gain"]}
+        threshold={REBIRTH_THRESHOLDS[2]}
+        currentPoints={state.points}
+        perks={["+25 prestige upgrade caps", "Prestige keeps upgrades"]}
         color={Colors.rebirthPink}
         active={canRebirth2}
-        unlocked={r2Active}
+        unlocked={state.rebirthTier >= 2}
         onPress={() => handleRebirth(2)}
-        requiresText="Rebirth I"
+        requiresText="Tier I"
       />
 
       <RebirthButton
         label="REBIRTH III"
-        threshold={REBIRTH3_THRESHOLD}
-        runPoints={state.runPoints}
-        perks={["Auto-buy prestige upgrades", "2x coin gain", "Unlock Point Tree"]}
+        threshold={REBIRTH_THRESHOLDS[3]}
+        currentPoints={state.points}
+        perks={["x3 reading points", "Unlock tree rows 9+"]}
         color={Colors.rebirthBlue}
         active={canRebirth3}
-        unlocked={r3Active}
+        unlocked={state.rebirthTier >= 3}
         onPress={() => handleRebirth(3)}
-        requiresText="2 Rebirths"
+        requiresText="Tier II"
       />
 
       <RebirthButton
         label="REBIRTH IV"
-        threshold={REBIRTH4_THRESHOLD}
-        runPoints={state.runPoints}
-        perks={["3x points", "3x XP", "3x PP gain"]}
+        threshold={REBIRTH_THRESHOLDS[4]}
+        currentPoints={state.points}
+        perks={["2x reading point gain", "2x book effectiveness"]}
         color={Colors.rebirthEmerald}
         active={canRebirth4}
-        unlocked={r4Active}
+        unlocked={state.rebirthTier >= 4}
         onPress={() => handleRebirth(4)}
-        requiresText="3 Rebirths"
+        requiresText="Tier III"
       />
 
       <RebirthButton
         label="REBIRTH V"
-        threshold={REBIRTH5_THRESHOLD}
-        runPoints={state.runPoints}
-        perks={["Auto-buy Point Tree upgrades", "Unlock Diamonds"]}
+        threshold={REBIRTH_THRESHOLDS[5]}
+        currentPoints={state.points}
+        perks={["x5 coin value", "2x prestige point gain"]}
         color={Colors.rebirthAmber}
         active={canRebirth5}
-        unlocked={r5Active}
+        unlocked={state.rebirthTier >= 5}
         onPress={() => handleRebirth(5)}
-        requiresText="4 Rebirths"
+        requiresText="Tier IV"
       />
     </View>
   );

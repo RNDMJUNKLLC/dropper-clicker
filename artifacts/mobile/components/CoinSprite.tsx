@@ -6,6 +6,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
+  withRepeat,
   withSequence,
   withTiming,
 } from "react-native-reanimated";
@@ -53,22 +54,12 @@ const RARITY_CONFIG: Record<
 
 interface CoinSpriteProps {
   coin: SpawnedCoin;
-  lifetimeMs: number;
   onCollect: (coin: SpawnedCoin) => void;
-  onExpire: (id: string) => void;
-  autoCollected?: boolean;
 }
 
-export default function CoinSprite({
-  coin,
-  lifetimeMs,
-  onCollect,
-  onExpire,
-  autoCollected,
-}: CoinSpriteProps) {
+export default function CoinSprite({ coin, onCollect }: CoinSpriteProps) {
   const config = RARITY_CONFIG[coin.rarity];
   const scale = useSharedValue(0);
-  const opacity = useSharedValue(0);
   const floatY = useSharedValue(0);
   const collected = useSharedValue(false);
   const collectScale = useSharedValue(1);
@@ -77,52 +68,35 @@ export default function CoinSprite({
   const plusY = useSharedValue(0);
 
   useEffect(() => {
-    scale.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.back(1.5)) });
+    scale.value = withTiming(1, {
+      duration: 300,
+      easing: Easing.out(Easing.back(1.5)),
+    });
 
-    const fadeStart = Math.max(0, lifetimeMs - 1000);
-    opacity.value = withSequence(
-      withTiming(1, { duration: 200 }),
-      withDelay(fadeStart - 200, withTiming(0, { duration: 1000 }))
-    );
-
-    floatY.value = withDelay(
-      300,
+    floatY.value = withRepeat(
       withSequence(
         withTiming(-6, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
-        withTiming(6, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
-        withTiming(-6, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 1200, easing: Easing.inOut(Easing.sin) })
-      )
+        withTiming(6, { duration: 1200, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      true
     );
-
-    const timer = setTimeout(() => {
-      onExpire(coin.id);
-    }, lifetimeMs);
-
-    return () => clearTimeout(timer);
   }, []);
 
-  const playCollectAnimation = (isAuto: boolean) => {
-    collectScale.value = withTiming(isAuto ? 0.5 : 1.5, { duration: 150 });
+  const handleCollect = () => {
+    if (collected.value) return;
+    collected.value = true;
+
+    collectScale.value = withTiming(1.5, { duration: 150 });
     collectOpacity.value = withDelay(100, withTiming(0, { duration: 200 }));
     plusOpacity.value = withSequence(
       withTiming(1, { duration: 100 }),
       withDelay(600, withTiming(0, { duration: 300 }))
     );
-    plusY.value = withTiming(-40, { duration: 800, easing: Easing.out(Easing.quad) });
-  };
-
-  useEffect(() => {
-    if (autoCollected && !collected.value) {
-      collected.value = true;
-      playCollectAnimation(true);
-    }
-  }, [autoCollected]);
-
-  const handleCollect = () => {
-    if (collected.value) return;
-    collected.value = true;
-    playCollectAnimation(false);
+    plusY.value = withTiming(-40, {
+      duration: 800,
+      easing: Easing.out(Easing.quad),
+    });
 
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -136,7 +110,7 @@ export default function CoinSprite({
       { scale: scale.value * collectScale.value },
       { translateY: floatY.value },
     ],
-    opacity: collected.value ? collectOpacity.value : opacity.value,
+    opacity: collectOpacity.value,
   }));
 
   const plusStyle = useAnimatedStyle(() => ({
@@ -145,15 +119,10 @@ export default function CoinSprite({
   }));
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        { left: coin.x, top: coin.y },
-      ]}
-    >
+    <Animated.View style={[styles.container, { left: coin.x, top: coin.y }]}>
       <Animated.View style={plusStyle}>
-        <Text style={[styles.plusText, { color: autoCollected ? Colors.coinLegendary : config.color }]}>
-          {autoCollected ? "⚡" : ""}+{coin.value}
+        <Text style={[styles.plusText, { color: config.color }]}>
+          +{coin.value}
         </Text>
       </Animated.View>
 

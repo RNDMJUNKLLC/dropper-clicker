@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import React, { useCallback } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Platform,
   StyleSheet,
@@ -26,6 +26,7 @@ interface FloatParticle {
 interface DropButtonProps {
   onDrop: () => void;
   dropAmount: number;
+  cooldownMs: number;
 }
 
 function FloatingText({
@@ -64,12 +65,16 @@ function FloatingText({
 
 let particleId = 0;
 
-export default function DropButton({ onDrop, dropAmount }: DropButtonProps) {
+export default function DropButton({ onDrop, dropAmount, cooldownMs }: DropButtonProps) {
   const scale = useSharedValue(1);
   const glow = useSharedValue(0.4);
   const [particles, setParticles] = React.useState<FloatParticle[]>([]);
+  const [onCooldown, setOnCooldown] = useState(false);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cooldownProgress = useSharedValue(1);
 
   const handlePress = useCallback(() => {
+    if (onCooldown) return;
     onDrop();
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -87,7 +92,14 @@ export default function DropButton({ onDrop, dropAmount }: DropButtonProps) {
     const id = particleId++;
     const x = 60 + Math.random() * 80;
     setParticles((prev) => [...prev, { id, x }]);
-  }, [onDrop]);
+
+    setOnCooldown(true);
+    cooldownProgress.value = 0;
+    cooldownProgress.value = withTiming(1, { duration: cooldownMs });
+    cooldownTimerRef.current = setTimeout(() => {
+      setOnCooldown(false);
+    }, cooldownMs);
+  }, [onDrop, onCooldown, cooldownMs]);
 
   const removeParticle = useCallback((id: number) => {
     setParticles((prev) => prev.filter((p) => p.id !== id));
@@ -99,6 +111,10 @@ export default function DropButton({ onDrop, dropAmount }: DropButtonProps) {
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glow.value,
+  }));
+
+  const cooldownBarStyle = useAnimatedStyle(() => ({
+    width: `${cooldownProgress.value * 100}%`,
   }));
 
   return (
@@ -118,16 +134,23 @@ export default function DropButton({ onDrop, dropAmount }: DropButtonProps) {
       <Animated.View style={btnStyle}>
         <TouchableOpacity
           onPress={handlePress}
-          style={styles.button}
+          style={[
+            styles.button,
+            onCooldown && styles.buttonCooldown,
+          ]}
           activeOpacity={0.8}
           testID="drop-button"
         >
           <View style={styles.innerCircle}>
-            <Text style={styles.dropIcon}>◆</Text>
-            <Text style={styles.dropLabel}>DROP</Text>
+            <Text style={[styles.dropIcon, onCooldown && styles.dimText]}>◆</Text>
+            <Text style={[styles.dropLabel, onCooldown && styles.dimText]}>DROP</Text>
           </View>
         </TouchableOpacity>
       </Animated.View>
+
+      <View style={styles.cooldownTrack}>
+        <Animated.View style={[styles.cooldownFill, cooldownBarStyle]} />
+      </View>
     </View>
   );
 }
@@ -139,12 +162,13 @@ const GLOW_OUTER_SIZE = 240;
 const styles = StyleSheet.create({
   container: {
     width: BTN_SIZE,
-    height: BTN_SIZE,
+    height: BTN_SIZE + 20,
     alignItems: "center",
     justifyContent: "center",
   },
   glowRing: {
     position: "absolute",
+    top: 0,
     width: GLOW_SIZE,
     height: GLOW_SIZE,
     borderRadius: GLOW_SIZE / 2,
@@ -154,6 +178,7 @@ const styles = StyleSheet.create({
   },
   glowRingOuter: {
     position: "absolute",
+    top: -20,
     width: GLOW_OUTER_SIZE,
     height: GLOW_OUTER_SIZE,
     borderRadius: GLOW_OUTER_SIZE / 2,
@@ -172,6 +197,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     elevation: 20,
   },
+  buttonCooldown: {
+    borderColor: Colors.accentDim,
+    opacity: 0.7,
+  },
   innerCircle: {
     alignItems: "center",
     justifyContent: "center",
@@ -187,6 +216,22 @@ const styles = StyleSheet.create({
     color: Colors.accent,
     letterSpacing: 4,
     fontFamily: "Inter_700Bold",
+  },
+  dimText: {
+    color: Colors.accentDim,
+  },
+  cooldownTrack: {
+    width: BTN_SIZE - 20,
+    height: 4,
+    backgroundColor: Colors.bgBorder,
+    borderRadius: 2,
+    overflow: "hidden",
+    marginTop: 8,
+  },
+  cooldownFill: {
+    height: "100%",
+    backgroundColor: Colors.accent,
+    borderRadius: 2,
   },
   floatText: {
     position: "absolute",

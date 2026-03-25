@@ -18,6 +18,7 @@ import Animated, {
 import Colors from "@/constants/colors";
 import {
   calcPrestigePoints,
+  getEffectivePrestigeMaxBuys,
   prestigeUpgradeCost,
   useGame,
 } from "@/context/GameContext";
@@ -99,16 +100,24 @@ export default function PrestigeSection() {
   const { state, prestige, buyPrestigeUpgrade, canPrestige } = useGame();
 
   const rawPP = calcPrestigePoints(state.points);
+  const rebirthPPMult =
+    state.rebirthTier >= 1 ? Math.pow(2, state.rebirthCount) : 1;
   const ppGainMult =
-    Math.pow(2, state.prestigeUpgrades.morePP.buys) *
-    (state.rebirthPerks.bonusMult ? 2 : 1);
+    Math.pow(2, state.prestigeUpgrades.morePP.buys) * rebirthPPMult;
   const totalPPGain = rawPP * ppGainMult;
+
+  const tier2Active = state.rebirthTier >= 2;
 
   const handlePrestige = () => {
     if (!canPrestige) return;
+    const resetNote = tier2Active
+      ? "Only points will be removed."
+      : "Reset all base progress and gain";
     Alert.alert(
       "Prestige",
-      `Reset all base progress and gain ${formatPP(totalPPGain)} Prestige Points?`,
+      tier2Active
+        ? `Remove all points and gain ${formatPP(totalPPGain)} Prestige Points? Upgrades are kept.`
+        : `Reset all base progress and gain ${formatPP(totalPPGain)} Prestige Points?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -169,7 +178,7 @@ export default function PrestigeSection() {
         sublabel={
           canPrestige
             ? `+${formatPP(totalPPGain)} PP`
-            : `Need ${formatNumber(1_000_000)} current points`
+            : `Need ${formatNumber(1000)} current points`
         }
         color={Colors.prestige}
         active={canPrestige}
@@ -179,6 +188,10 @@ export default function PrestigeSection() {
         {upgrades.map((upg) => {
           const upgrade = state.prestigeUpgrades[upg.id];
           const cost = prestigeUpgradeCost(upgrade);
+          const effectiveMax = getEffectivePrestigeMaxBuys(
+            upgrade.maxBuys,
+            tier2Active
+          );
           const canAfford = state.prestigePoints >= cost;
           return (
             <UpgradeCard
@@ -188,9 +201,9 @@ export default function PrestigeSection() {
               cost={cost}
               costLabel="PP"
               buys={upgrade.buys}
-              maxBuys={upgrade.maxBuys}
+              maxBuys={effectiveMax}
               canAfford={canAfford}
-              isMaxed={upgrade.buys >= upgrade.maxBuys}
+              isMaxed={upgrade.buys >= effectiveMax}
               onBuy={() => buyPrestigeUpgrade(upg.id)}
               color={upg.color}
             />

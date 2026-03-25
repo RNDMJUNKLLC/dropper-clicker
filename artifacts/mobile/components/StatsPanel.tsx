@@ -10,8 +10,9 @@ interface StatsPanelProps {
   prestigePoints: number;
   rebirthCount: number;
   dropAmount: number;
-  dropTimerMs: number;
-  levelMultiplier: number;
+  clickCooldownMs: number;
+  levelPointsMult: number;
+  levelXPMult: number;
 }
 
 function Stat({
@@ -40,8 +41,9 @@ export default function StatsPanel({
   prestigePoints,
   rebirthCount,
   dropAmount,
-  dropTimerMs,
-  levelMultiplier,
+  clickCooldownMs,
+  levelPointsMult,
+  levelXPMult,
 }: StatsPanelProps) {
   return (
     <View style={styles.container}>
@@ -62,9 +64,11 @@ export default function StatsPanel({
       </View>
       <View style={styles.separator} />
       <View style={styles.row}>
-        <Stat label="Auto Drop" value={formatTime(dropTimerMs)} color={Colors.accentDim} />
+        <Stat label="Cooldown" value={formatTime(clickCooldownMs)} color={Colors.accentDim} />
         <View style={styles.divider} />
-        <Stat label="Lvl Mult" value={`x${levelMultiplier.toFixed(2)}`} color={Colors.xp} />
+        <Stat label="Pts Mult" value={`x${levelPointsMult.toFixed(1)}`} color={Colors.xp} />
+        <View style={styles.divider} />
+        <Stat label="XP Mult" value={`x${levelXPMult.toFixed(1)}`} color={Colors.xp} />
       </View>
     </View>
   );

@@ -95,18 +95,18 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 
 ### `artifacts/mobile` (`@workspace/mobile`)
 
-Expo React Native mobile game "Dropper Clicker" — a 2D incremental clicker with three progression layers.
+Expo React Native mobile game "Dropper Clicker" — a 2D incremental clicker with manual drop mechanics and multiple progression layers.
 
-- **Game tab**: Drop button, auto-drop timer, XP/level system, drop upgrades (3), prestige system with prestige upgrades (3), rebirth system (5 tiers)
-- **Coins tab** (unlocked after Rebirth I): Mini-game where coins spawn and can be tapped to collect. Features:
-  - Coin upgrades (3): Coin Magnet, Lucky Drops, Coin Rush (1.3x cost scaling)
-  - Boosters (4): Point Surge (2x pts/drop), XP Surge (2x XP/drop), Auto Collector (auto-taps coins), Coin Multiplier (1.5x coin value) — all use 2x cost scaling
-  - Coin Frenzy: Active ability (2x spawn rate for 30s, 120s cooldown, one-time 2000 coin unlock)
-  - Combo system: Collecting coins within 2.5s builds combo (max 12, up to 4x multiplier)
+- **Game tab**: Manual DROP button with cooldown (2s base, reducible via rapidDrop upgrade, min 500ms), XP/level system with additive multipliers (pts: 1+(level-1)*2.5, XP: 1+(level-1)*0.5), drop upgrades (3: dropAmount, dropXP, rapidDrop), prestige system (unlocks at 1000 current points, PP = floor(pts/1000)), rebirth system (5 tiers with point-based costs)
+- **Bonuses tab** (unlocked at level 8): Coins spawn every 2s (cap 10, no expiry), tap to collect. Coin upgrades (3): moreCash (2x pts, max 10), moreXP (2x XP, max 10), fasterSpawn (-0.2s interval, max 4). No combo/frenzy system.
+- **Upgrade Tree** (unlocked at level 7): 9 rows of permanent nodes with multi-currency costs (points, PP, coins, RP), tree-wide multipliers. Defined in `constants/upgradeTree.ts`.
+- **Reading system** (unlocked via tree node r7_unlockReading): Books cost 10k coins +10%/buy, earn 1 RP/sec each. 3 reading upgrades: morePoints, moreXP, moreRP.
+- **Prestige**: Max 10 buys per upgrade (+25 with tier 2 rebirth). Upgrades: morePoints (2x), moreXP (2x), morePP (2x). Tier 2 rebirth keeps upgrades across prestiges.
+- **Rebirth**: 5 tiers, visible at level 10. Costs: T1=1e15, T2=2.5e16, T3=5e17, T4=2.5e19, T5=1e21. Uses `rebirthTier` integer (not boolean perks). Resets points, XP, level, upgrades, prestige; keeps coins, tree, reading.
 - **Auth**: Replit Auth (OIDC + PKCE) for cloud saves
 - **Cloud sync**: 10s debounced sync via GET/PUT /api/saves, offline queue, conflict resolution by lifetimePoints
-- **State**: GameContext.tsx manages all game state via useReducer; persisted to AsyncStorage (key: "dropper_game_v3") + cloud
-- **Design**: Dark navy (#050D1A) bg, neon cyan (#00E5FF) accents, gold for prestige, purple for rebirth
+- **State**: GameContext.tsx manages all game state via useReducer; persisted to AsyncStorage (key: "dropper_game_v3") + cloud. LOAD reducer migrates old saves (dropTimer→rapidDrop, pointSurge→moreCash, xpSurge→moreXP, coinRush→fasterSpawn, rebirthPerks booleans→rebirthTier integer).
+- **Design**: Dark navy (#050D1A) bg, neon cyan (#00E5FF) accents, gold for prestige, purple for rebirth, 5 rebirth tier colors
 
 ### `scripts` (`@workspace/scripts`)
 
