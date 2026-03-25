@@ -226,8 +226,10 @@ function getCoinValueMultiplier(state: GameState): number {
     if (node.effectType === "coinsMult") treeMult *= node.effectValue;
     if (node.effectType === "unlockReading") treeMult *= node.effectValue;
   }
-  const rebirthMult = state.rebirthTier >= 1 ? 3 : 1;
-  return treeMult * rebirthMult;
+  const rebirthFlatMult = state.rebirthTier >= 1 ? 3 : 1;
+  const rebirthStatMult =
+    state.rebirthTier >= 1 ? Math.pow(2, state.rebirthCount) : 1;
+  return treeMult * rebirthFlatMult * rebirthStatMult;
 }
 
 export function getCoinSpawnIntervalMs(state: GameState): number {
@@ -559,7 +561,10 @@ function reducer(
       });
       if (candidates.length === 0) return { state, leveledUp: false };
       const id = candidates.reduce((a, b) =>
-        state.dropUpgrades[a].buys <= state.dropUpgrades[b].buys ? a : b
+        dropUpgradeCost(state.dropUpgrades[a]) <=
+        dropUpgradeCost(state.dropUpgrades[b])
+          ? a
+          : b
       );
       const upg = state.dropUpgrades[id];
       return {
@@ -585,7 +590,10 @@ function reducer(
       );
       if (pCandidates.length === 0) return { state, leveledUp: false };
       const pId = pCandidates.reduce((a, b) =>
-        state.prestigeUpgrades[a].buys <= state.prestigeUpgrades[b].buys ? a : b
+        prestigeUpgradeCost(state.prestigeUpgrades[a]) <=
+        prestigeUpgradeCost(state.prestigeUpgrades[b])
+          ? a
+          : b
       );
       const pUpg = state.prestigeUpgrades[pId];
       return {
@@ -604,6 +612,8 @@ function reducer(
       if (state.rebirthTier < 4) return { state, leveledUp: false };
       if (!state.purchasedTreeNodes.includes("r7_unlockReading"))
         return { state, leveledUp: false };
+      const autoBkCost = getBookCost(state);
+      if (state.coins < autoBkCost) return { state, leveledUp: false };
       return {
         state: {
           ...state,
@@ -1172,7 +1182,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       autoT4Ref.current = setInterval(() => {
         dispatch({ type: "AUTO_INVEST_READING" });
         dispatch({ type: "AUTO_BUY_BOOK" });
-      }, 2000);
+      }, 1000);
     }
     return () => {
       if (autoT4Ref.current) clearInterval(autoT4Ref.current);
