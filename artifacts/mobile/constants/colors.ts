@@ -45,4 +45,13 @@ export const Colors = {
   coinLegendary: COIN_LEGENDARY,
 };
 
+export const Gradients: Record<string, [string, string, string]> = {
+  bgAtmosphere: [NAVY, '#081428', NAVY],
+  cardHighlight: ['#112240', NAVY_CARD, NAVY_CARD],
+  xpBar: ['#00CC6A', XP_GREEN, '#66FFB2'],
+  dropGlow: [CYAN + '00', CYAN + '30', CYAN + '00'],
+  splash: [NAVY, '#0A1E3D', NAVY],
+  tabBar: ['transparent', NAVY_CARD + 'E0', NAVY_CARD],
+};
+
 export default Colors;

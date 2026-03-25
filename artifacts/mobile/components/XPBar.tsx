@@ -1,13 +1,43 @@
 import React, { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import Colors from "@/constants/colors";
+import { LinearGradient } from "expo-linear-gradient";
+import Colors, { Gradients } from "@/constants/colors";
 import { formatNumber } from "@/utils/format";
+
+function AnimatedShimmer() {
+  const translateX = useSharedValue(-60);
+
+  useEffect(() => {
+    translateX.value = withRepeat(
+      withTiming(200, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      false
+    );
+  }, []);
+
+  const shimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.shimmerContainer, shimmerStyle]}>
+      <LinearGradient
+        colors={["transparent", "rgba(255,255,255,0.25)", "transparent"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.shimmerGradient}
+      />
+    </Animated.View>
+  );
+}
 
 interface XPBarProps {
   xp: number;
@@ -37,7 +67,13 @@ export default function XPBar({ xp, xpRequired, level, progress }: XPBarProps) {
       </View>
       <View style={styles.track}>
         <Animated.View style={[styles.fill, barStyle]}>
-          <View style={styles.shimmer} />
+          <LinearGradient
+            colors={Gradients.xpBar}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <AnimatedShimmer />
         </Animated.View>
       </View>
     </View>
@@ -74,18 +110,17 @@ const styles = StyleSheet.create({
   },
   fill: {
     height: "100%",
-    backgroundColor: Colors.xp,
     borderRadius: 4,
     elevation: 4,
     overflow: "hidden",
   },
-  shimmer: {
+  shimmerContainer: {
     position: "absolute",
     top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    borderRadius: 2,
+    bottom: 0,
+    width: 60,
+  },
+  shimmerGradient: {
+    flex: 1,
   },
 });

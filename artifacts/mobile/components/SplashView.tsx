@@ -9,7 +9,8 @@ import Animated, {
   withRepeat,
   Easing,
 } from "react-native-reanimated";
-import Colors from "@/constants/colors";
+import { LinearGradient } from "expo-linear-gradient";
+import Colors, { Gradients } from "@/constants/colors";
 
 export default function SplashView({ onReady }: { onReady: () => void }) {
   const titleOpacity = useSharedValue(0);
@@ -58,8 +59,19 @@ export default function SplashView({ onReady }: { onReady: () => void }) {
   }));
 
   return (
-    <View style={styles.container}>
-      <Animated.View style={[styles.glow, glowStyle]} />
+    <LinearGradient
+      colors={Gradients.splash}
+      locations={[0, 0.4, 1]}
+      style={styles.container}
+    >
+      <Animated.View style={[styles.glow, glowStyle]}>
+        <LinearGradient
+          colors={[Colors.accent + "30", Colors.accent + "08", "transparent"]}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0.5, y: 0.5 }}
+          end={{ x: 1, y: 1 }}
+        />
+      </Animated.View>
       <Animated.View style={titleStyle}>
         <Text style={styles.dropIcon}>💧</Text>
         <Text style={styles.title}>DROPPER</Text>
@@ -71,14 +83,13 @@ export default function SplashView({ onReady }: { onReady: () => void }) {
         <ActivityIndicator size="small" color={Colors.accent} />
         <Text style={styles.loadingText}>Loading...</Text>
       </Animated.View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.bg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -87,7 +98,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: Colors.accent,
+    overflow: "hidden",
   },
   dropIcon: {
     fontSize: 64,

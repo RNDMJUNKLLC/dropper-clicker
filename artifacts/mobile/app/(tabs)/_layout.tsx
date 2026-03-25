@@ -1,9 +1,10 @@
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { Tabs } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import Colors from "@/constants/colors";
+import Colors, { Gradients } from "@/constants/colors";
 import { useGame } from "@/context/GameContext";
 
 export default function TabLayout() {
@@ -19,9 +20,9 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : Colors.bgCard,
-          borderTopWidth: 1,
-          borderTopColor: Colors.bgBorder,
+          backgroundColor: "transparent",
+          borderTopWidth: 0,
+          borderTopColor: "transparent",
           elevation: 0,
           ...(isWeb ? { height: 84 } : {}),
         },
@@ -32,11 +33,13 @@ export default function TabLayout() {
               tint="dark"
               style={StyleSheet.absoluteFill}
             />
-          ) : isWeb ? (
-            <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: Colors.bgCard }]}
+          ) : (
+            <LinearGradient
+              colors={Gradients.tabBar}
+              locations={[0, 0.15, 1]}
+              style={StyleSheet.absoluteFill}
             />
-          ) : null,
+          ),
       }}
     >
       <Tabs.Screen

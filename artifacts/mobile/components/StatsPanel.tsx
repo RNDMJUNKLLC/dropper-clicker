@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Colors from "@/constants/colors";
+import { LinearGradient } from "expo-linear-gradient";
+import Colors, { Gradients } from "@/constants/colors";
 import { formatNumber, formatPP, formatTime } from "@/utils/format";
 
 interface StatsPanelProps {
@@ -46,7 +47,11 @@ export default function StatsPanel({
   levelXPMult,
 }: StatsPanelProps) {
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={Gradients.cardHighlight}
+      locations={[0, 0.15, 1]}
+      style={styles.container}
+    >
       <View style={styles.row}>
         <Stat label="Points" value={formatNumber(points)} color={Colors.accent} />
         <View style={styles.divider} />
@@ -70,18 +75,18 @@ export default function StatsPanel({
         <View style={styles.divider} />
         <Stat label="XP Mult" value={`x${levelXPMult.toFixed(1)}`} color={Colors.xp} />
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.bgCard,
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: Colors.bgBorder,
+    overflow: "hidden",
   },
   row: {
     flexDirection: "row",

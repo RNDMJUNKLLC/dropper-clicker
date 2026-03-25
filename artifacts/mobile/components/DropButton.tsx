@@ -1,5 +1,6 @@
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useRef, useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Platform,
   StyleSheet,
@@ -11,6 +12,7 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withSequence,
   withSpring,
   withTiming,
@@ -40,9 +42,12 @@ function FloatingText({
 }) {
   const opacity = useSharedValue(1);
   const translateY = useSharedValue(0);
+  const translateX = useSharedValue(0);
 
   React.useEffect(() => {
+    const horizontalDrift = (Math.random() - 0.5) * 40;
     translateY.value = withTiming(-70, { duration: 900, easing: Easing.out(Easing.quad) });
+    translateX.value = withTiming(horizontalDrift, { duration: 900, easing: Easing.out(Easing.quad) });
     opacity.value = withSequence(
       withTiming(1, { duration: 200 }),
       withTiming(0, { duration: 700 })
@@ -53,7 +58,10 @@ function FloatingText({
 
   const style = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
+    transform: [
+      { translateY: translateY.value },
+      { translateX: translateX.value },
+    ],
   }));
 
   return (
@@ -72,12 +80,28 @@ export default function DropButton({ onDrop, dropAmount, cooldownMs }: DropButto
   const [onCooldown, setOnCooldown] = useState(false);
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cooldownProgress = useSharedValue(1);
+  const idlePulse = useSharedValue(1);
 
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!onCooldown) {
+      idlePulse.value = withRepeat(
+        withSequence(
+          withTiming(1.03, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1.0, { duration: 1200, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
+    } else {
+      idlePulse.value = withTiming(1.0, { duration: 200 });
+    }
+  }, [onCooldown]);
 
   const handlePress = useCallback(() => {
     if (onCooldown) return;
@@ -112,7 +136,7 @@ export default function DropButton({ onDrop, dropAmount, cooldownMs }: DropButto
   }, []);
 
   const btnStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.value * idlePulse.value }],
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
@@ -134,8 +158,22 @@ export default function DropButton({ onDrop, dropAmount, cooldownMs }: DropButto
         />
       ))}
 
-      <Animated.View style={[styles.glowRing, glowStyle]} />
-      <Animated.View style={[styles.glowRingOuter, glowStyle]} />
+      <Animated.View style={[styles.glowRingOuter, glowStyle]}>
+        <LinearGradient
+          colors={[Colors.accent + "00", Colors.accent + "15", Colors.accent + "00"]}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+      </Animated.View>
+      <Animated.View style={[styles.glowRing, glowStyle]}>
+        <LinearGradient
+          colors={[Colors.accent + "00", Colors.accent + "30", Colors.accent + "00"]}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+      </Animated.View>
 
       <Animated.View style={btnStyle}>
         <TouchableOpacity
@@ -178,9 +216,9 @@ const styles = StyleSheet.create({
     width: GLOW_SIZE,
     height: GLOW_SIZE,
     borderRadius: GLOW_SIZE / 2,
-    backgroundColor: Colors.accent + "22",
-    borderWidth: 2,
-    borderColor: Colors.accent + "66",
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: Colors.accent + "44",
   },
   glowRingOuter: {
     position: "absolute",
@@ -188,9 +226,9 @@ const styles = StyleSheet.create({
     width: GLOW_OUTER_SIZE,
     height: GLOW_OUTER_SIZE,
     borderRadius: GLOW_OUTER_SIZE / 2,
-    backgroundColor: Colors.accent + "08",
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: Colors.accent + "33",
+    borderColor: Colors.accent + "22",
   },
   button: {
     width: BTN_SIZE,

@@ -1,4 +1,5 @@
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
 import {
   Platform,
@@ -11,10 +12,11 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors from "@/constants/colors";
+import Colors, { Gradients } from "@/constants/colors";
 import DropButton from "@/components/DropButton";
 import PrestigeSection from "@/components/PrestigeSection";
 import RebirthSection from "@/components/RebirthSection";
@@ -29,14 +31,19 @@ import { formatNumber, formatTime } from "@/utils/format";
 
 function LevelUpFlash() {
   const opacity = useSharedValue(0);
+  const flashScale = useSharedValue(1);
   const prevLeveledUp = useRef(false);
   const { leveledUp } = useGame();
 
   useEffect(() => {
     if (leveledUp && !prevLeveledUp.current) {
       opacity.value = withSequence(
-        withTiming(0.45, { duration: 80 }),
-        withTiming(0, { duration: 500 })
+        withTiming(0.5, { duration: 80 }),
+        withTiming(0, { duration: 600 })
+      );
+      flashScale.value = withSequence(
+        withTiming(1.03, { duration: 80 }),
+        withTiming(1.0, { duration: 500 })
       );
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -47,6 +54,7 @@ function LevelUpFlash() {
 
   const flashStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
+    transform: [{ scale: flashScale.value }],
   }));
 
   return (
@@ -79,6 +87,23 @@ export default function GameScreen() {
   const topPad = Platform.OS === "web" ? 67 : Math.max(insets.top, 20);
   const botPad = Platform.OS === "web" ? 34 : Math.max(insets.bottom, 20);
 
+  const pointsScale = useSharedValue(1);
+  const prevPoints = useRef(state.points);
+
+  useEffect(() => {
+    if (state.points !== prevPoints.current) {
+      pointsScale.value = withSequence(
+        withSpring(1.08, { damping: 8, stiffness: 500 }),
+        withSpring(1.0, { damping: 12, stiffness: 300 })
+      );
+      prevPoints.current = state.points;
+    }
+  }, [state.points]);
+
+  const pointsAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pointsScale.value }],
+  }));
+
   const dropUpgrades = [
     {
       id: "dropAmount" as const,
@@ -110,7 +135,11 @@ export default function GameScreen() {
   const prestigeProgress = Math.min(state.points / 1000, 1);
 
   return (
-    <View style={[styles.root, { paddingTop: topPad }]}>
+    <LinearGradient
+      colors={Gradients.bgAtmosphere}
+      locations={[0, 0.3, 1]}
+      style={[styles.root, { paddingTop: topPad }]}
+    >
       <LevelUpFlash />
 
       <ScrollView
@@ -129,7 +158,9 @@ export default function GameScreen() {
         </View>
 
         <View style={styles.pointsHero}>
-          <Text style={styles.pointsValue}>{formatNumber(state.points)}</Text>
+          <Animated.Text style={[styles.pointsValue, pointsAnimStyle]}>
+            {formatNumber(state.points)}
+          </Animated.Text>
           <Text style={styles.pointsLabel}>POINTS</Text>
         </View>
 
@@ -211,7 +242,11 @@ export default function GameScreen() {
           </View>
         ) : (
           <View style={styles.section}>
-            <View style={styles.lockedHint}>
+            <LinearGradient
+              colors={["#1A1A10", Colors.bgCard, Colors.bgCard]}
+              locations={[0, 0.2, 1]}
+              style={styles.lockedHint}
+            >
               <Text style={styles.lockedTitle}>PRESTIGE</Text>
               <Text style={styles.lockedText}>
                 Unlock at {formatNumber(1000)} current points
@@ -230,7 +265,7 @@ export default function GameScreen() {
               <Text style={styles.lockedProgress}>
                 {formatNumber(state.points)} / {formatNumber(1000)}
               </Text>
-            </View>
+            </LinearGradient>
           </View>
         )}
 
@@ -240,11 +275,10 @@ export default function GameScreen() {
           </View>
         ) : (
           <View style={styles.section}>
-            <View
-              style={[
-                styles.lockedHint,
-                { borderColor: Colors.rebirth + "33" },
-              ]}
+            <LinearGradient
+              colors={[Colors.rebirth + "15", Colors.bgCard, Colors.bgCard]}
+              locations={[0, 0.2, 1]}
+              style={[styles.lockedHint, { borderColor: Colors.rebirth + "33" }]}
             >
               <Text style={[styles.lockedTitle, { color: Colors.rebirth }]}>
                 REBIRTH
@@ -252,7 +286,7 @@ export default function GameScreen() {
               <Text style={styles.lockedText}>
                 Reach level {10} to unlock Rebirth
               </Text>
-            </View>
+            </LinearGradient>
           </View>
         )}
 
@@ -262,11 +296,10 @@ export default function GameScreen() {
           </View>
         ) : (
           <View style={styles.section}>
-            <View
-              style={[
-                styles.lockedHint,
-                { borderColor: Colors.rebirth + "33" },
-              ]}
+            <LinearGradient
+              colors={[Colors.rebirth + "15", Colors.bgCard, Colors.bgCard]}
+              locations={[0, 0.2, 1]}
+              style={[styles.lockedHint, { borderColor: Colors.rebirth + "33" }]}
             >
               <Text style={[styles.lockedTitle, { color: Colors.rebirth }]}>
                 UPGRADE TREE
@@ -274,18 +307,17 @@ export default function GameScreen() {
               <Text style={styles.lockedText}>
                 Reach level 7 to unlock the Upgrade Tree
               </Text>
-            </View>
+            </LinearGradient>
           </View>
         )}
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.bg,
   },
   levelFlash: {
     zIndex: 999,
@@ -385,12 +417,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   lockedHint: {
-    backgroundColor: Colors.bgCard,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.bgBorder,
     gap: 6,
+    overflow: "hidden",
   },
   lockedTitle: {
     fontSize: 12,
