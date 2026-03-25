@@ -134,24 +134,39 @@ function RebirthButton({
         </View>
 
         <View style={styles.perksContainer}>
-          {perks.map((perk, i) => (
-            <View key={i} style={styles.perkRow}>
-              <View
-                style={[
-                  styles.perkDot,
-                  { backgroundColor: unlocked ? color : Colors.textDim },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.perkText,
-                  { color: unlocked ? Colors.textPrimary : Colors.textDim },
-                ]}
-              >
-                {perk}
-              </Text>
-            </View>
-          ))}
+          {perks.map((perk, i) => {
+            const isComingSoon = perk.startsWith("Coming Soon:");
+            return (
+              <View key={i} style={styles.perkRow}>
+                <View
+                  style={[
+                    styles.perkDot,
+                    {
+                      backgroundColor: isComingSoon
+                        ? Colors.textDim
+                        : unlocked
+                          ? color
+                          : Colors.textDim,
+                    },
+                  ]}
+                />
+                {isComingSoon ? (
+                  <View style={styles.comingSoonBadge}>
+                    <Text style={styles.comingSoonText}>{perk}</Text>
+                  </View>
+                ) : (
+                  <Text
+                    style={[
+                      styles.perkText,
+                      { color: unlocked ? Colors.textPrimary : Colors.textDim },
+                    ]}
+                  >
+                    {perk}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
         </View>
       </TouchableOpacity>
     </View>
@@ -204,7 +219,11 @@ export default function RebirthSection() {
         label="REBIRTH I"
         threshold={REBIRTH_THRESHOLDS[1]}
         currentPoints={state.points}
-        perks={["2x all stats per rebirth", "x3 coin value"]}
+        perks={[
+          "Auto-click every 0.5s",
+          "2x all stats per rebirth",
+          "x3 coin value",
+        ]}
         color={Colors.rebirth}
         active={canRebirth1}
         unlocked={state.rebirthTier >= 1}
@@ -215,7 +234,12 @@ export default function RebirthSection() {
         label="REBIRTH II"
         threshold={REBIRTH_THRESHOLDS[2]}
         currentPoints={state.points}
-        perks={["Prestige keeps drop upgrades"]}
+        perks={[
+          "+25 max buys (drop & prestige upgrades)",
+          "x3 reading points",
+          "Unlock tree rows 9-10",
+          "Prestige keeps drop upgrades",
+        ]}
         color={Colors.rebirthPink}
         active={canRebirth2}
         unlocked={state.rebirthTier >= 2}
@@ -227,7 +251,10 @@ export default function RebirthSection() {
         label="REBIRTH III"
         threshold={REBIRTH_THRESHOLDS[3]}
         currentPoints={state.points}
-        perks={["x3 reading points", "Unlock tree rows 9-10"]}
+        perks={[
+          "Auto-buy drop & prestige upgrades (free)",
+          "+10% PP per second",
+        ]}
         color={Colors.rebirthBlue}
         active={canRebirth3}
         unlocked={state.rebirthTier >= 3}
@@ -239,7 +266,11 @@ export default function RebirthSection() {
         label="REBIRTH IV"
         threshold={REBIRTH_THRESHOLDS[4]}
         currentPoints={state.points}
-        perks={["2x reading point gain", "2x book effectiveness"]}
+        perks={[
+          "Auto-invest reading points evenly",
+          "Auto-buy books (free)",
+          "Coming Soon: Daily Challenges",
+        ]}
         color={Colors.rebirthEmerald}
         active={canRebirth4}
         unlocked={state.rebirthTier >= 4}
@@ -251,7 +282,10 @@ export default function RebirthSection() {
         label="REBIRTH V"
         threshold={REBIRTH_THRESHOLDS[5]}
         currentPoints={state.points}
-        perks={["x5 coin value", "2x prestige point gain"]}
+        perks={[
+          "Auto-buy coin upgrades (free)",
+          "Coming Soon: Gems & Diamonds",
+        ]}
         color={Colors.rebirthAmber}
         active={canRebirth5}
         unlocked={state.rebirthTier >= 5}
@@ -366,5 +400,17 @@ const styles = StyleSheet.create({
   perkText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
+  },
+  comingSoonBadge: {
+    backgroundColor: Colors.bgBorder,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  comingSoonText: {
+    fontSize: 10,
+    color: Colors.textDim,
+    fontFamily: "Inter_500Medium",
+    fontStyle: "italic" as const,
   },
 });

@@ -164,10 +164,22 @@ export default function PrestigeSection() {
             <Text style={styles.ppValue}>{formatPP(state.prestigePoints)}</Text>
             <Text style={styles.ppLabel}> PP</Text>
           </View>
+          {state.rebirthTier >= 3 && (
+            <View style={styles.autoBadge}>
+              <Text style={[styles.autoBadgeText, { color: Colors.rebirthBlue }]}>
+                AUTO-BUY
+              </Text>
+            </View>
+          )}
         </View>
         {ppGainMult > 1 && (
           <Text style={styles.effectiveNote}>
             PP gain: x{ppGainMult.toFixed(0)} (from upgrades/rebirth)
+          </Text>
+        )}
+        {state.rebirthTier >= 3 && (
+          <Text style={[styles.effectiveNote, { color: Colors.rebirthBlue }]}>
+            +10% PP/sec (passive)
           </Text>
         )}
       </View>
@@ -292,5 +304,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  autoBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1,
+    borderColor: Colors.bgBorder,
+  },
+  autoBadgeText: {
+    fontSize: 9,
+    fontWeight: "700" as const,
+    letterSpacing: 1.5,
+    fontFamily: "Inter_700Bold",
   },
 });

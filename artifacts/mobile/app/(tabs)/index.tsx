@@ -74,6 +74,7 @@ export default function GameScreen() {
     canPrestige,
     showRebirthSection,
     treeUnlocked,
+    effectiveDropMax,
   } = useGame();
 
   const topPad = Platform.OS === "web" ? 67 : Math.max(insets.top, 20);
@@ -149,6 +150,13 @@ export default function GameScreen() {
               +{formatNumber(dropAmount)} pts · +{formatNumber(xpAmount)} XP · {formatTime(clickCooldownMs)} cooldown
             </Text>
           </View>
+          {state.rebirthTier >= 1 && (
+            <View style={styles.autoBadge}>
+              <Text style={[styles.autoBadgeText, { color: Colors.rebirth }]}>
+                AUTO-CLICK 0.5s
+              </Text>
+            </View>
+          )}
         </View>
 
         <StatsPanel
@@ -165,11 +173,21 @@ export default function GameScreen() {
 
         {showUpgrades && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>UPGRADES</Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitle}>UPGRADES</Text>
+              {state.rebirthTier >= 3 && (
+                <View style={[styles.autoBadge, { marginBottom: 10 }]}>
+                  <Text style={[styles.autoBadgeText, { color: Colors.rebirthBlue }]}>
+                    AUTO-BUY
+                  </Text>
+                </View>
+              )}
+            </View>
             <View style={styles.upgradesGrid}>
               {dropUpgrades.map((upg) => {
                 const upgrade = state.dropUpgrades[upg.id];
                 const cost = dropUpgradeCost(upgrade);
+                const eMax = effectiveDropMax(upg.id);
                 return (
                   <UpgradeCard
                     key={upg.id}
@@ -178,9 +196,9 @@ export default function GameScreen() {
                     cost={cost}
                     costLabel="pts"
                     buys={upgrade.buys}
-                    maxBuys={upgrade.maxBuys}
+                    maxBuys={eMax}
                     canAfford={state.points >= cost}
-                    isMaxed={upgrade.buys >= upgrade.maxBuys}
+                    isMaxed={upgrade.buys >= eMax}
                     onBuy={() => buyDropUpgrade(upg.id)}
                     color={upg.color}
                   />
@@ -351,6 +369,11 @@ const styles = StyleSheet.create({
   section: {
     gap: 0,
   },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   sectionTitle: {
     fontSize: 11,
     fontWeight: "700" as const,
@@ -399,5 +422,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textDim,
     fontFamily: "Inter_400Regular",
+  },
+  autoBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1,
+    borderColor: Colors.bgBorder,
+  },
+  autoBadgeText: {
+    fontSize: 9,
+    fontWeight: "700" as const,
+    letterSpacing: 1.5,
+    fontFamily: "Inter_700Bold",
   },
 });

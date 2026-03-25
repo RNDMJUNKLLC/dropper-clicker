@@ -203,7 +203,16 @@ export default function CoinsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>COIN UPGRADES</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionTitle}>COIN UPGRADES</Text>
+            {state.rebirthTier >= 5 && (
+              <View style={styles.autoBadge}>
+                <Text style={[styles.autoBadgeText, { color: Colors.rebirthAmber }]}>
+                  AUTO-BUY
+                </Text>
+              </View>
+            )}
+          </View>
           <View style={styles.upgradesGrid}>
             {coinUpgradeList.map((upg) => {
               const upgrade = state.coinUpgrades[upg.id];
@@ -243,6 +252,13 @@ export default function CoinsScreen() {
                   {" "}RP
                 </Text>
               </View>
+              {state.rebirthTier >= 4 && (
+                <View style={styles.autoBadge}>
+                  <Text style={[styles.autoBadgeText, { color: Colors.rebirthEmerald }]}>
+                    AUTO-INVEST
+                  </Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.readingStats}>
@@ -269,7 +285,7 @@ export default function CoinsScreen() {
             <TouchableOpacity
               style={[
                 styles.bookButton,
-                state.coins >= bookCost
+                state.coins >= bookCost || state.rebirthTier >= 4
                   ? { borderColor: Colors.rebirthBlue + "88" }
                   : { opacity: 0.5 },
               ]}
@@ -279,30 +295,43 @@ export default function CoinsScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 }
               }}
-              disabled={state.coins < bookCost}
+              disabled={state.coins < bookCost && state.rebirthTier < 4}
               activeOpacity={0.75}
             >
-              <Text style={styles.bookButtonTitle}>Buy Book</Text>
+              <View style={styles.bookTitleRow}>
+                <Text style={styles.bookButtonTitle}>Buy Book</Text>
+                {state.rebirthTier >= 4 && (
+                  <View style={styles.autoBadge}>
+                    <Text style={[styles.autoBadgeText, { color: Colors.rebirthEmerald }]}>
+                      AUTO (FREE)
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.bookButtonDesc}>
                 +1 reading point/sec
               </Text>
               <View
                 style={[
                   styles.bookCostBadge,
-                  state.coins >= bookCost
-                    ? { backgroundColor: Colors.rebirthBlue + "22" }
-                    : { backgroundColor: Colors.bgBorder },
+                  state.rebirthTier >= 4
+                    ? { backgroundColor: Colors.rebirthEmerald + "22" }
+                    : state.coins >= bookCost
+                      ? { backgroundColor: Colors.rebirthBlue + "22" }
+                      : { backgroundColor: Colors.bgBorder },
                 ]}
               >
                 <Text
                   style={[
                     styles.bookCostText,
-                    state.coins >= bookCost
-                      ? { color: Colors.rebirthBlue }
-                      : { color: Colors.textDim },
+                    state.rebirthTier >= 4
+                      ? { color: Colors.rebirthEmerald }
+                      : state.coins >= bookCost
+                        ? { color: Colors.rebirthBlue }
+                        : { color: Colors.textDim },
                   ]}
                 >
-                  {formatNumber(bookCost)} coins
+                  {state.rebirthTier >= 4 ? "FREE" : `${formatNumber(bookCost)} coins`}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -549,8 +578,10 @@ const styles = StyleSheet.create({
   },
   readingHeader: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 6,
     marginBottom: 8,
   },
   readingStats: {
@@ -670,5 +701,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     fontFamily: "Inter_400Regular",
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  bookTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  autoBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1,
+    borderColor: Colors.bgBorder,
+  },
+  autoBadgeText: {
+    fontSize: 9,
+    fontWeight: "700" as const,
+    letterSpacing: 1.5,
+    fontFamily: "Inter_700Bold",
   },
 });

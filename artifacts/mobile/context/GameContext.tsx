@@ -95,6 +95,12 @@ type Action =
   | { type: "BUY_BOOK" }
   | { type: "INVEST_READING"; category: ReadingUpgradeId; amount: number }
   | { type: "TICK_READING" }
+  | { type: "TICK_PASSIVE_PP" }
+  | { type: "AUTO_BUY_DROP_UPGRADE" }
+  | { type: "AUTO_BUY_PRESTIGE_UPGRADE" }
+  | { type: "AUTO_BUY_BOOK" }
+  | { type: "AUTO_INVEST_READING" }
+  | { type: "AUTO_BUY_COIN_UPGRADE" }
   | { type: "PRESTIGE" }
   | { type: "REBIRTH"; which: 1 | 2 | 3 | 4 | 5 }
   | { type: "LOAD"; state: GameState };
@@ -132,9 +138,17 @@ export function prestigeUpgradeCost(upgrade: PrestigeUpgrade): number {
 
 export function getEffectivePrestigeMaxBuys(
   baseMax: number,
-  _tier2: boolean
+  tier2: boolean
 ): number {
-  return baseMax;
+  return tier2 ? baseMax + 25 : baseMax;
+}
+
+export function getEffectiveDropMaxBuys(
+  upgrade: DropUpgrade,
+  tier2: boolean
+): number {
+  if (upgrade.id === "rapidDrop") return upgrade.maxBuys;
+  return tier2 ? upgrade.maxBuys + 25 : upgrade.maxBuys;
 }
 
 export function calcPrestigePoints(currentPoints: number): number {
@@ -375,7 +389,8 @@ function reducer(
 
     case "BUY_DROP_UPGRADE": {
       const upg = state.dropUpgrades[action.id];
-      if (upg.buys >= upg.maxBuys) return { state, leveledUp: false };
+      const effectiveMax = getEffectiveDropMaxBuys(upg, state.rebirthTier >= 2);
+      if (upg.buys >= effectiveMax) return { state, leveledUp: false };
       const cost = dropUpgradeCost(upg);
       if (state.points < cost) return { state, leveledUp: false };
       return {
@@ -522,6 +537,132 @@ function reducer(
       };
     }
 
+    case "TICK_PASSIVE_PP": {
+      if (state.rebirthTier < 3) return { state, leveledUp: false };
+      if (state.prestigePoints <= 0) return { state, leveledUp: false };
+      const ppGain = Math.max(1, Math.floor(state.prestigePoints * 0.1));
+      return {
+        state: {
+          ...state,
+          prestigePoints: state.prestigePoints + ppGain,
+        },
+        leveledUp: false,
+      };
+    }
+
+    case "AUTO_BUY_DROP_UPGRADE": {
+      if (state.rebirthTier < 3) return { state, leveledUp: false };
+      const tier2 = state.rebirthTier >= 2;
+      const candidates = (["dropAmount", "dropXP"] as const).filter((id) => {
+        const u = state.dropUpgrades[id];
+        return u.buys < getEffectiveDropMaxBuys(u, tier2);
+      });
+      if (candidates.length === 0) return { state, leveledUp: false };
+      const id = candidates.reduce((a, b) =>
+        state.dropUpgrades[a].buys <= state.dropUpgrades[b].buys ? a : b
+      );
+      const upg = state.dropUpgrades[id];
+      return {
+        state: {
+          ...state,
+          dropUpgrades: {
+            ...state.dropUpgrades,
+            [id]: { ...upg, buys: upg.buys + 1 },
+          },
+        },
+        leveledUp: false,
+      };
+    }
+
+    case "AUTO_BUY_PRESTIGE_UPGRADE": {
+      if (state.rebirthTier < 3) return { state, leveledUp: false };
+      const tier2p = state.rebirthTier >= 2;
+      const pCandidates = (["morePoints", "moreXP", "morePP"] as const).filter(
+        (id) => {
+          const u = state.prestigeUpgrades[id];
+          return u.buys < getEffectivePrestigeMaxBuys(u.maxBuys, tier2p);
+        }
+      );
+      if (pCandidates.length === 0) return { state, leveledUp: false };
+      const pId = pCandidates.reduce((a, b) =>
+        state.prestigeUpgrades[a].buys <= state.prestigeUpgrades[b].buys ? a : b
+      );
+      const pUpg = state.prestigeUpgrades[pId];
+      return {
+        state: {
+          ...state,
+          prestigeUpgrades: {
+            ...state.prestigeUpgrades,
+            [pId]: { ...pUpg, buys: pUpg.buys + 1 },
+          },
+        },
+        leveledUp: false,
+      };
+    }
+
+    case "AUTO_BUY_BOOK": {
+      if (state.rebirthTier < 4) return { state, leveledUp: false };
+      if (!state.purchasedTreeNodes.includes("r7_unlockReading"))
+        return { state, leveledUp: false };
+      return {
+        state: {
+          ...state,
+          reading: {
+            ...state.reading,
+            books: state.reading.books + 1,
+          },
+        },
+        leveledUp: false,
+      };
+    }
+
+    case "AUTO_INVEST_READING": {
+      if (state.rebirthTier < 4) return { state, leveledUp: false };
+      const rp = Math.floor(state.reading.readingPoints);
+      if (rp < 3) return { state, leveledUp: false };
+      const perCategory = Math.floor(rp / 3);
+      return {
+        state: {
+          ...state,
+          reading: {
+            ...state.reading,
+            readingPoints: state.reading.readingPoints - perCategory * 3,
+            upgrades: {
+              morePoints: state.reading.upgrades.morePoints + perCategory,
+              moreXP: state.reading.upgrades.moreXP + perCategory,
+              moreRP: state.reading.upgrades.moreRP + perCategory,
+            },
+          },
+        },
+        leveledUp: false,
+      };
+    }
+
+    case "AUTO_BUY_COIN_UPGRADE": {
+      if (state.rebirthTier < 5) return { state, leveledUp: false };
+      const cCandidates = (
+        ["moreCash", "moreXP", "fasterSpawn"] as const
+      ).filter((id) => {
+        const u = state.coinUpgrades[id];
+        return u.buys < u.maxBuys;
+      });
+      if (cCandidates.length === 0) return { state, leveledUp: false };
+      const cId = cCandidates.reduce((a, b) =>
+        state.coinUpgrades[a].buys <= state.coinUpgrades[b].buys ? a : b
+      );
+      const cUpg = state.coinUpgrades[cId];
+      return {
+        state: {
+          ...state,
+          coinUpgrades: {
+            ...state.coinUpgrades,
+            [cId]: { ...cUpg, buys: cUpg.buys + 1 },
+          },
+        },
+        leveledUp: false,
+      };
+    }
+
     case "PRESTIGE": {
       if (state.points < 1000) return { state, leveledUp: false };
       const ppGain = calcPrestigePoints(state.points);
@@ -647,6 +788,8 @@ function reducer(
         },
       };
 
+      const tier2Active = rebirthTier >= 2;
+
       const loadedPrestige = s.prestigeUpgrades ?? {};
       const mergedPrestige: GameState["prestigeUpgrades"] = {
         morePoints: {
@@ -655,7 +798,7 @@ function reducer(
           maxBuys: initialPrestigeUpgrades.morePoints.maxBuys,
           buys: Math.min(
             loadedPrestige.morePoints?.buys ?? 0,
-            initialPrestigeUpgrades.morePoints.maxBuys
+            getEffectivePrestigeMaxBuys(initialPrestigeUpgrades.morePoints.maxBuys, tier2Active)
           ),
         },
         moreXP: {
@@ -664,7 +807,7 @@ function reducer(
           maxBuys: initialPrestigeUpgrades.moreXP.maxBuys,
           buys: Math.min(
             loadedPrestige.moreXP?.buys ?? 0,
-            initialPrestigeUpgrades.moreXP.maxBuys
+            getEffectivePrestigeMaxBuys(initialPrestigeUpgrades.moreXP.maxBuys, tier2Active)
           ),
         },
         morePP: {
@@ -673,7 +816,7 @@ function reducer(
           maxBuys: initialPrestigeUpgrades.morePP.maxBuys,
           buys: Math.min(
             loadedPrestige.morePP?.buys ?? 0,
-            initialPrestigeUpgrades.morePP.maxBuys
+            getEffectivePrestigeMaxBuys(initialPrestigeUpgrades.morePP.maxBuys, tier2Active)
           ),
         },
       };
@@ -789,6 +932,8 @@ interface GameContextValue {
   showRebirthSection: boolean;
   leveledUp: boolean;
   cloudSyncStatus: CloudSyncStatus;
+  effectiveDropMax: (id: DropUpgrade["id"]) => number;
+  effectivePrestigeMax: (id: PrestigeUpgrade["id"]) => number;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -808,6 +953,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cloudSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const readingTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoClickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoT3Ref = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoT4Ref = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoT5Ref = useRef<ReturnType<typeof setInterval> | null>(null);
   const [localLoaded, setLocalLoaded] = useState(false);
   const cloudSyncedRef = useRef(false);
   const pendingCloudSaveRef = useRef(false);
@@ -991,6 +1140,57 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (autoClickRef.current) clearInterval(autoClickRef.current);
+    if (state.rebirthTier >= 1) {
+      autoClickRef.current = setInterval(() => {
+        dispatch({ type: "DROP" });
+      }, 500);
+    }
+    return () => {
+      if (autoClickRef.current) clearInterval(autoClickRef.current);
+    };
+  }, [state.rebirthTier]);
+
+  useEffect(() => {
+    if (autoT3Ref.current) clearInterval(autoT3Ref.current);
+    if (state.rebirthTier >= 3) {
+      autoT3Ref.current = setInterval(() => {
+        dispatch({ type: "AUTO_BUY_DROP_UPGRADE" });
+        dispatch({ type: "AUTO_BUY_PRESTIGE_UPGRADE" });
+        dispatch({ type: "TICK_PASSIVE_PP" });
+      }, 1000);
+    }
+    return () => {
+      if (autoT3Ref.current) clearInterval(autoT3Ref.current);
+    };
+  }, [state.rebirthTier]);
+
+  useEffect(() => {
+    if (autoT4Ref.current) clearInterval(autoT4Ref.current);
+    if (state.rebirthTier >= 4) {
+      autoT4Ref.current = setInterval(() => {
+        dispatch({ type: "AUTO_INVEST_READING" });
+        dispatch({ type: "AUTO_BUY_BOOK" });
+      }, 2000);
+    }
+    return () => {
+      if (autoT4Ref.current) clearInterval(autoT4Ref.current);
+    };
+  }, [state.rebirthTier]);
+
+  useEffect(() => {
+    if (autoT5Ref.current) clearInterval(autoT5Ref.current);
+    if (state.rebirthTier >= 5) {
+      autoT5Ref.current = setInterval(() => {
+        dispatch({ type: "AUTO_BUY_COIN_UPGRADE" });
+      }, 1000);
+    }
+    return () => {
+      if (autoT5Ref.current) clearInterval(autoT5Ref.current);
+    };
+  }, [state.rebirthTier]);
+
   const drop = useCallback(() => dispatch({ type: "DROP" }), []);
   const buyDropUpgrade = useCallback(
     (id: DropUpgrade["id"]) => dispatch({ type: "BUY_DROP_UPGRADE", id }),
@@ -1077,6 +1277,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const showRebirthSection =
     state.level >= REBIRTH_MIN_LEVEL || state.rebirthCount > 0;
 
+  const effectiveDropMax = useCallback(
+    (id: DropUpgrade["id"]) =>
+      getEffectiveDropMaxBuys(state.dropUpgrades[id], state.rebirthTier >= 2),
+    [state.dropUpgrades, state.rebirthTier]
+  );
+
+  const effectivePrestigeMax = useCallback(
+    (id: PrestigeUpgrade["id"]) =>
+      getEffectivePrestigeMaxBuys(
+        state.prestigeUpgrades[id].maxBuys,
+        state.rebirthTier >= 2
+      ),
+    [state.prestigeUpgrades, state.rebirthTier]
+  );
+
   const value = useMemo(
     () => ({
       state,
@@ -1115,6 +1330,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       showRebirthSection,
       leveledUp: combined.leveledUp,
       cloudSyncStatus,
+      effectiveDropMax,
+      effectivePrestigeMax,
     }),
     [
       state,
@@ -1153,6 +1370,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       showRebirthSection,
       combined.leveledUp,
       cloudSyncStatus,
+      effectiveDropMax,
+      effectivePrestigeMax,
     ]
   );
 
