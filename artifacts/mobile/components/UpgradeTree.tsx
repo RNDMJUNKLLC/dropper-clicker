@@ -7,26 +7,8 @@ import {
   isNodeAvailable,
   isRowComplete,
 } from "@/constants/upgradeTree";
-import { useGame } from "@/context/GameContext";
+import { useGame, getCurrencyAmount } from "@/context/GameContext";
 import TreeNodeCard from "./TreeNodeCard";
-
-function getCurrencyAmount(
-  state: { points: number; prestigePoints: number; coins: number; reading: { readingPoints: number } },
-  currency: string
-): number {
-  switch (currency) {
-    case "points":
-      return state.points;
-    case "prestigePoints":
-      return state.prestigePoints;
-    case "coins":
-      return state.coins;
-    case "readingPoints":
-      return state.reading.readingPoints;
-    default:
-      return 0;
-  }
-}
 
 export default function UpgradeTree() {
   const { state, buyTreeNode } = useGame();

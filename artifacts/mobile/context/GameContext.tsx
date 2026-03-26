@@ -113,7 +113,7 @@ const CLICK_COOLDOWN_BASE = 2000;
 const CLICK_COOLDOWN_REDUCTION = 300;
 const CLICK_COOLDOWN_MIN = 500;
 
-const REBIRTH_THRESHOLDS = [0, 1e15, 2.5e16, 5e17, 2.5e19, 1e21];
+export const REBIRTH_THRESHOLDS = [0, 1e15, 2.5e16, 5e17, 2.5e19, 1e21];
 const REBIRTH_MIN_LEVEL = 10;
 
 export function xpForLevel(level: number): number {
@@ -138,9 +138,9 @@ export function prestigeUpgradeCost(upgrade: PrestigeUpgrade): number {
 
 export function getEffectivePrestigeMaxBuys(
   baseMax: number,
-  _tier2: boolean
+  tier2: boolean
 ): number {
-  return baseMax;
+  return tier2 ? baseMax + 25 : baseMax;
 }
 
 export function getEffectiveDropMaxBuys(
@@ -268,7 +268,7 @@ export function getBookCost(state: GameState): number {
   return Math.ceil(10000 * Math.pow(scaleFactor, state.reading.books));
 }
 
-function getCurrencyAmount(state: GameState, currency: TreeCurrency): number {
+export function getCurrencyAmount(state: GameState, currency: TreeCurrency): number {
   switch (currency) {
     case "points":
       return state.points;
@@ -542,7 +542,8 @@ function reducer(
     case "TICK_PASSIVE_PP": {
       if (state.rebirthTier < 3) return { state, leveledUp: false };
       if (state.prestigePoints <= 0) return { state, leveledUp: false };
-      const ppGain = Math.floor(state.prestigePoints * 0.1);
+      const rawPPGain = Math.floor(state.prestigePoints * 0.1);
+      const ppGain = Math.min(rawPPGain, state.level * 100);
       if (ppGain <= 0) return { state, leveledUp: false };
       return {
         state: {
@@ -613,8 +614,6 @@ function reducer(
       if (state.rebirthTier < 4) return { state, leveledUp: false };
       if (!state.purchasedTreeNodes.includes("r7_unlockReading"))
         return { state, leveledUp: false };
-      const autoBkCost = getBookCost(state);
-      if (state.coins < autoBkCost) return { state, leveledUp: false };
       return {
         state: {
           ...state,
@@ -798,7 +797,8 @@ function reducer(
 
       const tier2Active = rebirthTier >= 2;
 
-      const loadedPrestige = s.prestigeUpgrades ?? {};
+      const loadedPrestige: Partial<GameState["prestigeUpgrades"]> =
+        s.prestigeUpgrades ?? {};
       const mergedPrestige: GameState["prestigeUpgrades"] = {
         morePoints: {
           ...initialPrestigeUpgrades.morePoints,
@@ -857,7 +857,7 @@ function reducer(
         },
       };
 
-      const loadedReading = s.reading ?? {};
+      const loadedReading: Partial<GameState["reading"]> = s.reading ?? {};
       const mergedReading: GameState["reading"] = {
         books: loadedReading.books ?? 0,
         readingPoints: loadedReading.readingPoints ?? 0,

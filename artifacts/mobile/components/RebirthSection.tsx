@@ -16,10 +16,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import Colors from "@/constants/colors";
-import { useGame } from "@/context/GameContext";
+import { useGame, REBIRTH_THRESHOLDS } from "@/context/GameContext";
 import { formatNumber } from "@/utils/format";
-
-const REBIRTH_THRESHOLDS = [0, 1e15, 2.5e16, 5e17, 2.5e19, 1e21];
 
 function ProgressBar({
   value,
