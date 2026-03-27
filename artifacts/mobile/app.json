@@ -14,10 +14,15 @@
       "backgroundColor": "#050D1A"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.rndmdevs.dropincremental",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "backgroundColor": "#050D1A"
+      "backgroundColor": "#050D1A",
+      "package": "com.rndmdevs.dropincremental"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -36,6 +41,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fd76a906-43ac-4b77-ba03-841325047f99"
+      }
     }
   }
 }
