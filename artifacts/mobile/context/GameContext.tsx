@@ -22,6 +22,11 @@ import {
   isNodeAvailable,
   type TreeCurrency,
 } from "@/constants/upgradeTree";
+import {
+  getMilestoneMultiplier,
+  getReadingUpgradesCap,
+  isPPFullPercentUnlocked,
+} from "@/constants/milestones";
 
 export interface DropUpgrade {
   id: "dropAmount" | "dropXP" | "rapidDrop";
@@ -83,6 +88,7 @@ export interface GameState {
       moreRP: number;
     };
   };
+  milestonesSeen: boolean;
 }
 
 type Action =
@@ -103,6 +109,7 @@ type Action =
   | { type: "AUTO_BUY_COIN_UPGRADE" }
   | { type: "PRESTIGE" }
   | { type: "REBIRTH"; which: 1 | 2 | 3 | 4 | 5 }
+  | { type: "SET_MILESTONES_SEEN" }
   | { type: "LOAD"; state: GameState };
 
 const XP_BASE = 100;
@@ -180,6 +187,8 @@ function getDropAmount(state: GameState): number {
     ppBoost = 1 + (state.prestigePoints / 1e9) * 0.1;
   }
 
+  const milestoneMult = getMilestoneMultiplier("pointsMult", state.level, state.rebirthTier);
+
   return Math.floor(
     baseAmount *
       levelMult *
@@ -188,7 +197,8 @@ function getDropAmount(state: GameState): number {
       treePtsMult *
       readingMult *
       rebirthStatMult *
-      ppBoost
+      ppBoost *
+      milestoneMult
   );
 }
 
@@ -207,6 +217,13 @@ function getXPAmount(state: GameState): number {
     coinsBoost = 1 + (state.coins / 1e9) * 0.1;
   }
 
+  let coinsBoost2 = 1;
+  if (state.purchasedTreeNodes.includes("r11_xpByCoins")) {
+    coinsBoost2 = 1 + (state.coins / 1e9) * 1;
+  }
+
+  const milestoneMult = getMilestoneMultiplier("xpMult", state.level, state.rebirthTier);
+
   return Math.floor(
     baseXP *
       levelMult *
@@ -215,7 +232,9 @@ function getXPAmount(state: GameState): number {
       treeXPMult *
       readingMult *
       rebirthStatMult *
-      coinsBoost
+      coinsBoost *
+      coinsBoost2 *
+      milestoneMult
   );
 }
 
@@ -229,7 +248,8 @@ function getCoinValueMultiplier(state: GameState): number {
   const rebirthFlatMult = state.rebirthTier >= 1 ? 3 : 1;
   const rebirthStatMult =
     state.rebirthTier >= 1 ? Math.pow(2, state.rebirthCount) : 1;
-  return treeMult * rebirthFlatMult * rebirthStatMult;
+  const milestoneMult = getMilestoneMultiplier("coinsMult", state.level, state.rebirthTier);
+  return treeMult * rebirthFlatMult * rebirthStatMult * milestoneMult;
 }
 
 export function getCoinSpawnIntervalMs(state: GameState): number {
@@ -345,6 +365,7 @@ const initialState: GameState = {
   coinUpgrades: initialCoinUpgrades,
   purchasedTreeNodes: [],
   reading: initialReading,
+  milestonesSeen: false,
 };
 
 function applyDrop(
@@ -504,10 +525,18 @@ function reducer(
     }
 
     case "INVEST_READING": {
-      const { category, amount } = action;
-      if (amount <= 0) return { state, leveledUp: false };
-      if (state.reading.readingPoints < amount)
+      const { category, amount: rawAmount } = action;
+      if (rawAmount <= 0) return { state, leveledUp: false };
+      if (state.reading.readingPoints < rawAmount)
         return { state, leveledUp: false };
+      const cap = getReadingUpgradesCap(state.level, state.rebirthTier);
+      let amount = rawAmount;
+      if (cap !== null) {
+        const current = state.reading.upgrades[category];
+        const room = cap - current;
+        if (room <= 0) return { state, leveledUp: false };
+        amount = Math.min(amount, room);
+      }
       return {
         state: {
           ...state,
@@ -542,8 +571,10 @@ function reducer(
     case "TICK_PASSIVE_PP": {
       if (state.rebirthTier < 3) return { state, leveledUp: false };
       if (state.prestigePoints <= 0) return { state, leveledUp: false };
-      const rawPPGain = Math.floor(state.prestigePoints * 0.1);
-      const ppGain = Math.min(rawPPGain, state.level * 100);
+      const ppRate = isPPFullPercentUnlocked(state.level, state.rebirthTier) ? 1.0 : 0.1;
+      const rawPPGain = Math.floor(state.prestigePoints * ppRate);
+      const ppMilestoneMult = getMilestoneMultiplier("prestigePointsMult", state.level, state.rebirthTier);
+      const ppGain = Math.min(Math.floor(rawPPGain * ppMilestoneMult), state.level * 100);
       if (ppGain <= 0) return { state, leveledUp: false };
       return {
         state: {
@@ -630,17 +661,28 @@ function reducer(
       if (state.rebirthTier < 4) return { state, leveledUp: false };
       const rp = Math.floor(state.reading.readingPoints);
       if (rp < 3) return { state, leveledUp: false };
-      const perCategory = Math.floor(rp / 3);
+      let perCategory = Math.floor(rp / 3);
+      const autoCap = getReadingUpgradesCap(state.level, state.rebirthTier);
+      let morePointsAdd = perCategory;
+      let moreXPAdd = perCategory;
+      let moreRPAdd = perCategory;
+      if (autoCap !== null) {
+        morePointsAdd = Math.min(perCategory, Math.max(0, autoCap - state.reading.upgrades.morePoints));
+        moreXPAdd = Math.min(perCategory, Math.max(0, autoCap - state.reading.upgrades.moreXP));
+        moreRPAdd = Math.min(perCategory, Math.max(0, autoCap - state.reading.upgrades.moreRP));
+      }
+      const totalSpent = morePointsAdd + moreXPAdd + moreRPAdd;
+      if (totalSpent <= 0) return { state, leveledUp: false };
       return {
         state: {
           ...state,
           reading: {
             ...state.reading,
-            readingPoints: state.reading.readingPoints - perCategory * 3,
+            readingPoints: state.reading.readingPoints - totalSpent,
             upgrades: {
-              morePoints: state.reading.upgrades.morePoints + perCategory,
-              moreXP: state.reading.upgrades.moreXP + perCategory,
-              moreRP: state.reading.upgrades.moreRP + perCategory,
+              morePoints: state.reading.upgrades.morePoints + morePointsAdd,
+              moreXP: state.reading.upgrades.moreXP + moreXPAdd,
+              moreRP: state.reading.upgrades.moreRP + moreRPAdd,
             },
           },
         },
@@ -682,7 +724,8 @@ function reducer(
       const ppMult =
         Math.pow(2, state.prestigeUpgrades.morePP.buys) *
         (state.rebirthTier >= 1 ? Math.pow(2, state.rebirthCount) : 1);
-      const totalPP = ppGain * ppMult;
+      const ppMilestoneMult = getMilestoneMultiplier("prestigePointsMult", state.level, state.rebirthTier);
+      const totalPP = Math.floor(ppGain * ppMult * ppMilestoneMult);
 
       if (state.rebirthTier >= 2) {
         return {
@@ -729,7 +772,15 @@ function reducer(
           rebirthTier: Math.max(state.rebirthTier, which),
           lifetimePoints: state.lifetimePoints,
           lifetimeCoins: state.lifetimeCoins,
+          milestonesSeen: state.milestonesSeen,
         },
+        leveledUp: false,
+      };
+    }
+
+    case "SET_MILESTONES_SEEN": {
+      return {
+        state: { ...state, milestonesSeen: true },
         leveledUp: false,
       };
     }
@@ -886,6 +937,7 @@ function reducer(
           coinUpgrades: mergedCoinUpg,
           purchasedTreeNodes: s.purchasedTreeNodes ?? [],
           reading: mergedReading,
+          milestonesSeen: s.milestonesSeen ?? false,
         },
         leveledUp: false,
       };
@@ -941,6 +993,9 @@ interface GameContextValue {
   cloudSyncStatus: CloudSyncStatus;
   effectiveDropMax: (id: DropUpgrade["id"]) => number;
   effectivePrestigeMax: (id: PrestigeUpgrade["id"]) => number;
+  milestonesUnlocked: boolean;
+  setMilestonesSeen: () => void;
+  readingUpgradesCap: number | null;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -1282,6 +1337,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
   const showRebirthSection =
     state.level >= REBIRTH_MIN_LEVEL || state.rebirthCount > 0;
+  const milestonesUnlocked = state.rebirthTier >= 5;
+  const setMilestonesSeen = useCallback(
+    () => dispatch({ type: "SET_MILESTONES_SEEN" }),
+    []
+  );
+  const readingUpgradesCap = useMemo(
+    () => getReadingUpgradesCap(state.level, state.rebirthTier),
+    [state.level, state.rebirthTier]
+  );
 
   const effectiveDropMax = useCallback(
     (id: DropUpgrade["id"]) =>
@@ -1337,6 +1401,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       cloudSyncStatus,
       effectiveDropMax,
       effectivePrestigeMax,
+      milestonesUnlocked,
+      setMilestonesSeen,
+      readingUpgradesCap,
     }),
     [
       state,
@@ -1376,6 +1443,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       cloudSyncStatus,
       effectiveDropMax,
       effectivePrestigeMax,
+      milestonesUnlocked,
+      setMilestonesSeen,
+      readingUpgradesCap,
     ]
   );
 

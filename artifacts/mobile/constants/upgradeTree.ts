@@ -11,7 +11,8 @@ export type TreeEffectType =
   | "unlockReading"
   | "cheaperBooks"
   | "pointsBoostByPP"
-  | "xpBoostByCoins";
+  | "xpBoostByCoins"
+  | "xpBoostByCoins2";
 
 export interface TreeNode {
   id: string;
@@ -55,9 +56,11 @@ export const UPGRADE_TREE: TreeNode[] = [
   { id: "r10_morePoints", name: "More Points", description: "x5 points", row: 10, cost: 500000, currency: "readingPoints", effectType: "pointsMult", effectValue: 5, requiresRebirthTier: 2 },
   { id: "r10_moreCoins", name: "More Coins", description: "x5 coins", row: 10, cost: 1e24, currency: "points", effectType: "coinsMult", effectValue: 5, requiresRebirthTier: 2 },
   { id: "r10_moreRP", name: "More Reading Pts", description: "x5 reading points", row: 10, cost: 500000, currency: "coins", effectType: "readingPointsMult", effectValue: 5, requiresRebirthTier: 2 },
+
+  { id: "r11_xpByCoins", name: "Coin Wisdom", description: "+1x XP per 1B coins", row: 11, cost: 1e6, currency: "readingPoints", effectType: "xpBoostByCoins2", effectValue: 1, requiresRebirthTier: 5, requiresLevel: 14 },
 ];
 
-export const TREE_ROW_COUNT = 10;
+export const TREE_ROW_COUNT = 11;
 
 export function getNodesInRow(row: number): TreeNode[] {
   return UPGRADE_TREE.filter((n) => n.row === row);

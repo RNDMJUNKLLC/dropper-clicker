@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
+import { isCoinAutoCollectUnlocked } from "@/constants/milestones";
 import CoinSprite, { CoinRarity, SpawnedCoin } from "@/components/CoinSprite";
 import UpgradeCard from "@/components/UpgradeCard";
 import { coinUpgradeCost, useGame, type ReadingUpgradeId } from "@/context/GameContext";
@@ -54,6 +55,7 @@ export default function CoinsScreen() {
     coinSpawnBulk,
     readingPointsPerSec,
     bookCost,
+    readingUpgradesCap,
   } = useGame();
   const insets = useSafeAreaInsets();
   const topPad = Math.max(insets.top, 20);
@@ -119,6 +121,19 @@ export default function CoinsScreen() {
     [collectCoin]
   );
 
+  const coinAutoCollect = isCoinAutoCollectUnlocked(state.level, state.rebirthTier);
+  const coinsRef = useRef<SpawnedCoin[]>([]);
+  coinsRef.current = coins;
+
+  useEffect(() => {
+    if (!coinAutoCollect || !bonusesUnlocked) return;
+    const timer = setInterval(() => {
+      const current = coinsRef.current;
+      current.forEach((coin) => handleCollect(coin));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [coinAutoCollect, bonusesUnlocked, handleCollect]);
+
   const coinUpgradeList = [
     {
       id: "moreCash" as const,
@@ -162,9 +177,18 @@ export default function CoinsScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>BONUSES</Text>
-          <View style={styles.balanceBadge}>
-            <Text style={styles.balanceValue}>{formatNumber(state.coins)}</Text>
-            <Text style={styles.balanceLabel}> coins</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {coinAutoCollect && (
+              <View style={styles.autoBadge}>
+                <Text style={[styles.autoBadgeText, { color: Colors.rebirthAmber }]}>
+                  AUTO-COLLECT
+                </Text>
+              </View>
+            )}
+            <View style={styles.balanceBadge}>
+              <Text style={styles.balanceValue}>{formatNumber(state.coins)}</Text>
+              <Text style={styles.balanceLabel}> coins</Text>
+            </View>
           </View>
         </View>
 
@@ -340,6 +364,7 @@ export default function CoinsScreen() {
               const invested = state.reading.upgrades[upg.id];
               const currentMult = (1 + invested * upg.multPer).toFixed(2);
               const rp = Math.floor(state.reading.readingPoints);
+              const atCap = readingUpgradesCap !== null && invested >= readingUpgradesCap;
 
               return (
                 <View key={upg.id} style={styles.readingUpgradeCard}>
@@ -355,7 +380,7 @@ export default function CoinsScreen() {
                         {currentMult}{upg.unit}
                       </Text>
                       <Text style={styles.readingUpgradeMultLabel}>
-                        {invested} invested
+                        {invested}{readingUpgradesCap !== null ? `/${readingUpgradesCap}` : ""} invested
                       </Text>
                     </View>
                   </View>
@@ -365,11 +390,11 @@ export default function CoinsScreen() {
                         key={amt}
                         style={[
                           styles.investButton,
-                          rp >= amt
+                          rp >= amt && !atCap
                             ? { borderColor: Colors.rebirthBlue + "66" }
                             : { opacity: 0.4 },
                         ]}
-                        disabled={rp < amt}
+                        disabled={rp < amt || atCap}
                         onPress={() => {
                           investReading(upg.id, amt);
                           if (Platform.OS !== "web") {
@@ -392,11 +417,11 @@ export default function CoinsScreen() {
                       style={[
                         styles.investButton,
                         { flex: 1 },
-                        rp >= 1
+                        rp >= 1 && !atCap
                           ? { borderColor: Colors.rebirthBlue + "66" }
                           : { opacity: 0.4 },
                       ]}
-                      disabled={rp < 1}
+                      disabled={rp < 1 || atCap}
                       onPress={() => {
                         investReading(upg.id, rp);
                         if (Platform.OS !== "web") {

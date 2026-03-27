@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -23,6 +23,8 @@ import RebirthSection from "@/components/RebirthSection";
 import StatsPanel from "@/components/StatsPanel";
 import UpgradeCard from "@/components/UpgradeCard";
 import UpgradeTree from "@/components/UpgradeTree";
+import MilestonesButton from "@/components/MilestonesButton";
+import MilestonesModal from "@/components/MilestonesModal";
 import CloudSyncIndicator from "@/components/CloudSyncIndicator";
 import UserIndicator from "@/components/UserIndicator";
 import XPBar from "@/components/XPBar";
@@ -82,6 +84,8 @@ export default function GameScreen() {
     showRebirthSection,
     treeUnlocked,
     effectiveDropMax,
+    milestonesUnlocked,
+    setMilestonesSeen,
   } = useGame();
 
   const topPad = Platform.OS === "web" ? 67 : Math.max(insets.top, 20);
@@ -134,6 +138,12 @@ export default function GameScreen() {
 
   const prestigeProgress = Math.min(state.points / 1000, 1);
 
+  const [milestonesVisible, setMilestonesVisible] = useState(false);
+  const openMilestones = () => {
+    setMilestonesVisible(true);
+    if (!state.milestonesSeen) setMilestonesSeen();
+  };
+
   return (
     <LinearGradient
       colors={Gradients.bgAtmosphere}
@@ -152,6 +162,12 @@ export default function GameScreen() {
             <Text style={styles.gameTagline}>incremental</Text>
           </View>
           <View style={styles.headerRight}>
+            {milestonesUnlocked && (
+              <MilestonesButton
+                onPress={openMilestones}
+                isNew={!state.milestonesSeen}
+              />
+            )}
             <CloudSyncIndicator />
             <UserIndicator />
           </View>
@@ -311,6 +327,13 @@ export default function GameScreen() {
           </View>
         )}
       </ScrollView>
+
+      <MilestonesModal
+        visible={milestonesVisible}
+        onClose={() => setMilestonesVisible(false)}
+        currentLevel={state.level}
+        rebirthTier={state.rebirthTier}
+      />
     </LinearGradient>
   );
 }
