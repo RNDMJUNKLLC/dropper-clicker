@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -9,11 +10,28 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
+import { useGame } from "@/context/GameContext";
 import { useAuth } from "@/lib/auth";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { user, isLoading, isAuthenticated, login, logout } = useAuth();
+  const { resetGame } = useGame();
+
+  const handleResetData = () => {
+    Alert.alert(
+      "Reset All Data",
+      "This will permanently delete ALL game progress. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset Everything",
+          style: "destructive",
+          onPress: () => resetGame(),
+        },
+      ]
+    );
+  };
 
   const topPad = Platform.OS === "web" ? 67 : Math.max(insets.top, 20);
   const botPad = Platform.OS === "web" ? 34 : Math.max(insets.bottom, 20);
@@ -87,6 +105,19 @@ export default function SettingsScreen() {
           <Text style={styles.aboutDim}>
             An incremental game with drops, prestige, rebirth, and coins.
           </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>DATA</Text>
+          <Text style={styles.aboutDim}>
+            Reset all game progress and start fresh.
+          </Text>
+          <Pressable
+            style={styles.resetButton}
+            onPress={handleResetData}
+          >
+            <Text style={styles.resetButtonText}>Reset All Data</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </View>
@@ -210,5 +241,21 @@ const styles = StyleSheet.create({
     color: Colors.textDim,
     fontFamily: "Inter_400Regular",
     lineHeight: 18,
+  },
+  resetButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: Colors.danger + "66",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 4,
+  },
+  resetButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.danger,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
   },
 });

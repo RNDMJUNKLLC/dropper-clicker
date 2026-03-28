@@ -46,6 +46,7 @@ export default function CoinsScreen() {
     state,
     collectCoin,
     buyCoinUpgrade,
+    buyMaxCoinUpgrade,
     buyBook,
     investReading,
     bonusesUnlocked,
@@ -253,6 +254,7 @@ export default function CoinsScreen() {
                   canAfford={state.coins >= cost}
                   isMaxed={upgrade.buys >= upgrade.maxBuys}
                   onBuy={() => buyCoinUpgrade(upg.id)}
+                  onBuyMax={() => buyMaxCoinUpgrade(upg.id)}
                   color={upg.color}
                 />
               );

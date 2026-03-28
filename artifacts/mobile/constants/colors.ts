@@ -37,6 +37,7 @@ export const Colors = {
   textPrimary: TEXT_PRIMARY,
   textSecondary: TEXT_SECONDARY,
   textDim: TEXT_DIM,
+  gold: "#FFD700",
   danger: "#FF4444",
   white: "#FFFFFF",
   coinBronze: COIN_BRONZE,

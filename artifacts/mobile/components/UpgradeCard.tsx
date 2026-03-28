@@ -20,6 +20,7 @@ interface UpgradeCardProps {
   canAfford: boolean;
   isMaxed: boolean;
   onBuy: () => void;
+  onBuyMax?: () => void;
   color?: string;
 }
 
@@ -33,6 +34,7 @@ export default function UpgradeCard({
   canAfford,
   isMaxed,
   onBuy,
+  onBuyMax,
   color = Colors.accent,
 }: UpgradeCardProps) {
   const handleBuy = () => {
@@ -40,6 +42,14 @@ export default function UpgradeCard({
     onBuy();
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const handleBuyMax = () => {
+    if (!canAfford || isMaxed || !onBuyMax) return;
+    onBuyMax();
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
   };
 
@@ -70,10 +80,21 @@ export default function UpgradeCard({
         {isMaxed ? (
           <Text style={styles.maxedLabel}>MAXED</Text>
         ) : (
-          <View style={[styles.costBadge, canAfford ? { backgroundColor: color + "22" } : styles.costBadgeDisabled]}>
-            <Text style={[styles.costText, canAfford ? { color } : styles.costTextDisabled]}>
-              {formatNumber(cost)} {costLabel}
-            </Text>
+          <View style={styles.footerRow}>
+            <View style={[styles.costBadge, canAfford ? { backgroundColor: color + "22" } : styles.costBadgeDisabled]}>
+              <Text style={[styles.costText, canAfford ? { color } : styles.costTextDisabled]}>
+                {formatNumber(cost)} {costLabel}
+              </Text>
+            </View>
+            {onBuyMax && canAfford && (
+              <TouchableOpacity
+                onPress={handleBuyMax}
+                style={[styles.maxBtn, { backgroundColor: color + "22" }]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.maxBtnText, { color }]}>MAX</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -129,6 +150,11 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 2,
   },
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   costBadge: {
     borderRadius: 6,
     paddingHorizontal: 8,
@@ -152,5 +178,16 @@ const styles = StyleSheet.create({
     color: Colors.textDim,
     fontFamily: "Inter_700Bold",
     letterSpacing: 2,
+  },
+  maxBtn: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  maxBtnText: {
+    fontSize: 10,
+    fontWeight: "800" as const,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
   },
 });

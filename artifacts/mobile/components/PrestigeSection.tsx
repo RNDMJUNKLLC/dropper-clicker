@@ -97,7 +97,7 @@ function PulseButton({
 }
 
 export default function PrestigeSection() {
-  const { state, prestige, buyPrestigeUpgrade, canPrestige } = useGame();
+  const { state, prestige, buyPrestigeUpgrade, buyMaxPrestigeUpgrade, canPrestige } = useGame();
 
   const rawPP = calcPrestigePoints(state.points);
   const rebirthPPMult =
@@ -201,8 +201,7 @@ export default function PrestigeSection() {
           const upgrade = state.prestigeUpgrades[upg.id];
           const cost = prestigeUpgradeCost(upgrade);
           const effectiveMax = getEffectivePrestigeMaxBuys(
-            upgrade.maxBuys,
-            tier2Active
+            upgrade.maxBuys
           );
           const canAfford = state.prestigePoints >= cost;
           return (
@@ -217,6 +216,7 @@ export default function PrestigeSection() {
               canAfford={canAfford}
               isMaxed={upgrade.buys >= effectiveMax}
               onBuy={() => buyPrestigeUpgrade(upg.id)}
+              onBuyMax={() => buyMaxPrestigeUpgrade(upg.id)}
               color={upg.color}
             />
           );

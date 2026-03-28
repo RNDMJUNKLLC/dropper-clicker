@@ -25,6 +25,8 @@ import UpgradeCard from "@/components/UpgradeCard";
 import UpgradeTree from "@/components/UpgradeTree";
 import MilestonesButton from "@/components/MilestonesButton";
 import MilestonesModal from "@/components/MilestonesModal";
+import GamepassButton from "@/components/GamepassButton";
+import GamepassModal from "@/components/GamepassModal";
 import CloudSyncIndicator from "@/components/CloudSyncIndicator";
 import UserIndicator from "@/components/UserIndicator";
 import XPBar from "@/components/XPBar";
@@ -73,6 +75,7 @@ export default function GameScreen() {
     state,
     drop,
     buyDropUpgrade,
+    buyMaxDropUpgrade,
     dropAmount,
     xpAmount,
     clickCooldownMs,
@@ -139,6 +142,7 @@ export default function GameScreen() {
   const prestigeProgress = Math.min(state.points / 1000, 1);
 
   const [milestonesVisible, setMilestonesVisible] = useState(false);
+  const [gamepassVisible, setGamepassVisible] = useState(false);
   const openMilestones = () => {
     setMilestonesVisible(true);
     if (!state.milestonesSeen) setMilestonesSeen();
@@ -162,6 +166,7 @@ export default function GameScreen() {
             <Text style={styles.gameTagline}>incremental</Text>
           </View>
           <View style={styles.headerRight}>
+            <GamepassButton onPress={() => setGamepassVisible(true)} />
             {milestonesUnlocked && (
               <MilestonesButton
                 onPress={openMilestones}
@@ -198,8 +203,8 @@ export default function GameScreen() {
           </View>
           {state.rebirthTier >= 1 && (
             <View style={styles.autoBadge}>
-              <Text style={[styles.autoBadgeText, { color: Colors.rebirth }]}>
-                AUTO-CLICK 0.5s
+              <Text style={[styles.autoBadgeText, { color: state.ownedGamepasses.includes("opAutoDropper") ? Colors.gold : Colors.rebirth }]}>
+                AUTO-CLICK {state.ownedGamepasses.includes("opAutoDropper") ? "0.1s" : "0.5s"}
               </Text>
             </View>
           )}
@@ -245,6 +250,7 @@ export default function GameScreen() {
                     canAfford={state.points >= cost}
                     isMaxed={upgrade.buys >= eMax}
                     onBuy={() => buyDropUpgrade(upg.id)}
+                    onBuyMax={() => buyMaxDropUpgrade(upg.id)}
                     color={upg.color}
                   />
                 );
@@ -333,6 +339,11 @@ export default function GameScreen() {
         onClose={() => setMilestonesVisible(false)}
         currentLevel={state.level}
         rebirthTier={state.rebirthTier}
+      />
+
+      <GamepassModal
+        visible={gamepassVisible}
+        onClose={() => setGamepassVisible(false)}
       />
     </LinearGradient>
   );
