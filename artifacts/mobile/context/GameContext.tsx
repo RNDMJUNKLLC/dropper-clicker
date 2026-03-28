@@ -663,11 +663,17 @@ function reducer(
 
     case "TICK_PASSIVE_PP": {
       if (state.rebirthTier < 3) return { state, leveledUp: false };
-      if (state.prestigePoints <= 0) return { state, leveledUp: false };
-      const ppRate = isPPFullPercentUnlocked(state.level, state.rebirthTier) ? 1.0 : 0.1;
-      const rawPPGain = Math.floor(state.prestigePoints * ppRate);
+      if (state.points < 1000) return { state, leveledUp: false };
+      // Calculate what you'd gain if you prestiged right now
+      const basePPGain = calcPrestigePoints(state.points);
+      const ppMult =
+        Math.pow(2, state.prestigeUpgrades.morePP.buys) *
+        (state.rebirthTier >= 1 ? Math.pow(2, state.rebirthCount) : 1);
       const ppMilestoneMult = getMilestoneMultiplier("prestigePointsMult", state.level, state.rebirthTier);
-      const ppGain = Math.min(Math.floor(rawPPGain * ppMilestoneMult), state.level * 100);
+      const fullPPGain = basePPGain * ppMult * ppMilestoneMult;
+      // Gain 10% of that per second (or 100% at milestone 16)
+      const ppRate = isPPFullPercentUnlocked(state.level, state.rebirthTier) ? 1.0 : 0.1;
+      const ppGain = Math.floor(fullPPGain * ppRate);
       if (ppGain <= 0) return { state, leveledUp: false };
       return {
         state: {

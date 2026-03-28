@@ -27,11 +27,16 @@ export default function MilestonesModal({
   const active = rebirthTier >= 5;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
-        <View style={styles.card}>
+        <View style={styles.container}>
           <View style={styles.header}>
-            <View style={styles.headerLeft}>
+            <View style={styles.titleRow}>
               <MaterialCommunityIcons
                 name="trophy-outline"
                 size={20}
@@ -39,37 +44,37 @@ export default function MilestonesModal({
               />
               <Text style={styles.title}>MILESTONES</Text>
             </View>
-            <TouchableOpacity onPress={onClose} hitSlop={12}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <MaterialCommunityIcons
                 name="close"
-                size={22}
+                size={20}
                 color={Colors.textSecondary}
               />
             </TouchableOpacity>
           </View>
 
           {!active && (
-            <Text style={styles.lockedText}>
-              Reach Rebirth Tier 5 to unlock milestones.
-            </Text>
+            <View style={styles.lockedRow}>
+              <Text style={styles.lockedText}>
+                Reach Rebirth Tier 5 to unlock milestones.
+              </Text>
+            </View>
           )}
 
           <ScrollView
             style={styles.list}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
           >
             {MILESTONES.map((milestone) => {
               const reached = active && currentLevel >= milestone.level;
-              const hasFuture = milestone.effects.some((e) => isFutureEffect(e.type));
+              const hasFuture = milestone.effects.some((e) =>
+                isFutureEffect(e.type)
+              );
 
               return (
                 <View
                   key={milestone.level}
-                  style={[
-                    styles.row,
-                    reached && styles.rowReached,
-                  ]}
+                  style={[styles.row, reached && styles.rowReached]}
                 >
                   <View
                     style={[
@@ -125,67 +130,79 @@ export default function MilestonesModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    padding: 20,
   },
-  card: {
-    width: "100%",
-    maxHeight: "80%",
+  container: {
     backgroundColor: Colors.bgCard,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.bgBorder,
-    padding: 16,
+    borderColor: Colors.rebirthAmber + "30",
+    width: "100%",
+    maxWidth: 400,
+    maxHeight: "80%",
+    padding: 20,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  headerLeft: {
+  titleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
   title: {
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "700",
     color: Colors.rebirthAmber,
-    letterSpacing: 1.5,
+    letterSpacing: 3,
+    fontFamily: "Inter_700Bold",
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  lockedRow: {
+    backgroundColor: Colors.bg,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.bgBorder,
   },
   lockedText: {
     fontSize: 13,
     color: Colors.textDim,
     textAlign: "center",
-    marginBottom: 12,
+    fontFamily: "Inter_400Regular",
   },
   list: {
-    flex: 1,
-  },
-  listContent: {
-    gap: 8,
-    paddingBottom: 8,
+    flexGrow: 0,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.bg,
-    borderRadius: 10,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: Colors.bgBorder,
-    padding: 10,
-    gap: 10,
+    gap: 12,
   },
   rowReached: {
     borderColor: Colors.rebirthAmber + "40",
+    backgroundColor: Colors.rebirthAmber + "08",
   },
   levelBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -193,11 +210,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.rebirthAmber + "20",
   },
   levelBadgeLocked: {
-    backgroundColor: Colors.bgBorder,
+    backgroundColor: Colors.bgCard,
   },
   levelText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
+    fontFamily: "Inter_700Bold",
   },
   levelTextReached: {
     color: Colors.rebirthAmber,
@@ -212,6 +230,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 13,
     fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
   },
   descriptionReached: {
     color: Colors.textPrimary,
@@ -223,5 +242,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontStyle: "italic",
     color: Colors.textDim,
+    fontFamily: "Inter_400Regular",
   },
 });
