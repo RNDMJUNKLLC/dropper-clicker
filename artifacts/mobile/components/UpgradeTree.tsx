@@ -40,7 +40,6 @@ export default function UpgradeTree() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>UPGRADE TREE</Text>
         <View style={styles.progressBadge}>
           <Text style={styles.progressText}>
             {purchasedCount}/{totalNodes}

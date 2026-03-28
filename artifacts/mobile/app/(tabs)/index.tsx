@@ -22,7 +22,8 @@ import PrestigeSection from "@/components/PrestigeSection";
 import RebirthSection from "@/components/RebirthSection";
 import StatsPanel from "@/components/StatsPanel";
 import UpgradeCard from "@/components/UpgradeCard";
-import UpgradeTree from "@/components/UpgradeTree";
+import UpgradeTreeButton from "@/components/UpgradeTreeButton";
+import UpgradeTreeModal from "@/components/UpgradeTreeModal";
 import MilestonesButton from "@/components/MilestonesButton";
 import MilestonesModal from "@/components/MilestonesModal";
 import GamepassButton from "@/components/GamepassButton";
@@ -143,6 +144,7 @@ export default function GameScreen() {
 
   const [milestonesVisible, setMilestonesVisible] = useState(false);
   const [gamepassVisible, setGamepassVisible] = useState(false);
+  const [treeVisible, setTreeVisible] = useState(false);
   const openMilestones = () => {
     setMilestonesVisible(true);
     if (!state.milestonesSeen) setMilestonesSeen();
@@ -167,6 +169,9 @@ export default function GameScreen() {
           </View>
           <View style={styles.headerRight}>
             <GamepassButton onPress={() => setGamepassVisible(true)} />
+            {treeUnlocked && (
+              <UpgradeTreeButton onPress={() => setTreeVisible(true)} />
+            )}
             {milestonesUnlocked && (
               <MilestonesButton
                 onPress={openMilestones}
@@ -312,11 +317,7 @@ export default function GameScreen() {
           </View>
         )}
 
-        {treeUnlocked ? (
-          <View style={styles.section}>
-            <UpgradeTree />
-          </View>
-        ) : (
+        {!treeUnlocked && (
           <View style={styles.section}>
             <LinearGradient
               colors={[Colors.rebirth + "15", Colors.bgCard, Colors.bgCard]}
@@ -344,6 +345,11 @@ export default function GameScreen() {
       <GamepassModal
         visible={gamepassVisible}
         onClose={() => setGamepassVisible(false)}
+      />
+
+      <UpgradeTreeModal
+        visible={treeVisible}
+        onClose={() => setTreeVisible(false)}
       />
     </LinearGradient>
   );
